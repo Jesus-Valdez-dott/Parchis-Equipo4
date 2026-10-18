@@ -10,7 +10,7 @@ package Red;
  */
 public class MensajeMovimiento extends MensajeRed{
     private String idFicha;
-    private int idCasillaDestino;
+    private int idCasillaDestino; // Nombres exactos del UML[cite: 2]
 
     public MensajeMovimiento(String idJugadorEmisor, String idFicha, int idCasillaDestino) {
         super(idJugadorEmisor, "MOVIMIENTO_FICHA");
@@ -18,11 +18,6 @@ public class MensajeMovimiento extends MensajeRed{
         this.idCasillaDestino = idCasillaDestino;
     }
 
-    public String getIdFicha() {
-        return idFicha;
-    }
-
-    public int getIdCasillaDestino() {
-        return idCasillaDestino;
-    }
+    public String getIdFicha() { return idFicha; }
+    public int getIdCasillaDestino() { return idCasillaDestino; }
 }

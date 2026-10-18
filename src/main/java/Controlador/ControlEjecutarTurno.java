@@ -6,14 +6,16 @@ package Controlador;
 
 import Modelo.Fachada.FachadaPartida;
 import Red.IGestorRed;
+import Red.INotificadorRed;
 import Red.MensajeDado;
 import Red.MensajeMovimiento;
+import Red.MensajeRed;
 
 /**
  *
  * @author Jesús
  */
-public class ControlEjecutarTurno implements IController{
+public class ControlEjecutarTurno implements IController, INotificadorRed{
     private FachadaPartida fachada;
     private IGestorRed gestorRed;
 
@@ -43,6 +45,19 @@ public class ControlEjecutarTurno implements IController{
             int destinoCalculado = 0; // Valor de ejemplo
             MensajeMovimiento mensaje = new MensajeMovimiento(idJugador, idFicha, destinoCalculado);
             gestorRed.transmitirEvento(mensaje);
+        }
+    }
+    
+    @Override
+    public void mensajeRecibido(MensajeRed mensaje) {
+        if (mensaje instanceof MensajeDado) {
+            MensajeDado msgDado = (MensajeDado) mensaje;
+            System.out.println("El jugador " + msgDado.getIdJugadorEmisor() + " sacó un " + msgDado.getValorDado());
+            // Aquí llamarías a fachada para replicar la acción en tu tablero local
+        }
+        else if (mensaje instanceof MensajeMovimiento) {
+            MensajeMovimiento msgMov = (MensajeMovimiento) mensaje;
+            // Aquí replicarías el movimiento del rival en tu tablero local
         }
     }
 }

@@ -12,13 +12,17 @@ public class Ficha {
     private String idFicha;
     private int distanciaRecorrida;
     private String estado; // Se podría cambiar a un Enum
+    private ColorJugador color;
+    private final int DISTANCIA_TOTAL_META = 76;
     private int posicion;
 
-    public Ficha(String idFicha) {
+    public Ficha(String idFicha, ColorJugador color) {
         this.idFicha = idFicha;
         this.distanciaRecorrida = 0;
         this.estado = "EN_BASE";
-        this.posicion = -1; // -1 puede representar que está fuera del tablero
+        this.color = color;
+        
+        this.posicion = -1; // -1 representa que está fuera del tablero
     }
 
     public void activar(int salida) {
@@ -42,10 +46,26 @@ public class Ficha {
         this.estado = "EN_META";
         // La posición final y lógica exacta de meta dependerá del array del tablero
     }
+    
+    public void sumarDistancia(int pasosAvanzados) {
+        this.distanciaRecorrida += pasosAvanzados;
+    }
+    
+    public int calcularCasillasFaltantes() {
+        if ("EN_META".equals(this.estado)) {
+            return 0; // Si ya llegó, le faltan 0
+        } else if ("EN_BASE".equals(this.estado)) {
+             return DISTANCIA_TOTAL_META; // Si ni siquiera ha salido, le falta todo el recorrido
+        } else {
+             // Si está activa, le restamos la distancia que ya recorrió
+             return DISTANCIA_TOTAL_META - this.distanciaRecorrida; 
+        }
+    }
 
     // Getters
     public String getIdFicha() { return idFicha; }
     public int getDistanciaRecorrida() { return distanciaRecorrida; }
     public String getEstado() { return estado; }
     public int getPosicion() { return posicion; }
+    public ColorJugador getColor() { return this.color; }
 }

@@ -4,7 +4,9 @@
  */
 package Modelo;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +39,7 @@ public class Juego {
 
     public boolean puedeLanzar(String idJugador) {
         Jugador jugadorActual = obtenerJugadorActual();
-        if (jugadorActual != null && jugadorActual.getIdJugador().equals(idJugador)) {
+        if (jugadorActual != null && jugadorActual.equals(idJugador)) {
             return "ESPERANDO_LANZAMIENTO".equals(turno.getFase());
         }
         return false;
@@ -45,9 +47,8 @@ public class Juego {
 
     public boolean puedeMover(String idJugador, String idFicha) {
         Jugador jugadorActual = obtenerJugadorActual();
-        if (jugadorActual != null && jugadorActual.getIdJugador().equals(idJugador)) {
+        if (jugadorActual != null && jugadorActual.equals(idJugador)) {
              return "ESPERANDO_MOVIMIENTO".equals(turno.getFase());
-             // La validación real de si la ficha específica se puede mover irá en ReglasMovimiento
         }
         return false;
     }
@@ -90,19 +91,41 @@ public class Juego {
     }
 
     public List<String> obtenerFichasMovibles() {
-        // Esta es una delegación hacia la clase ReglasMovimiento.
-        // Por ahora se devuelve una lista vacía para no romper el código.
-        return new LinkedList<>(); 
+        // Juego delega esta complejidad a ReglasMovimiento.
+        ReglasMovimiento reglas = new ReglasMovimiento();
+        return reglas.obtenerFichasMovibles(this);
     }
 
     public Map<String, Integer> obtenerPosiciones() {
-        // Regla: "Las posiciones se determinarán sumando el número de casillas que le faltaron a cada una de las fichas de cada jugador para llegar a su meta."
-        // Por ahora devolvemos un mapa vacío, la lógica matemática exacta se calculará después.
-        Map<String, Integer> posiciones = new HashMap<>();
-        for(Jugador j: jugadores){
-             posiciones.put(j.getIdJugador(), 0); 
+        // Mapa temporal para guardar los cálculos
+        Map<String, Integer> puntajesDesordenados = new HashMap<>();
+
+        // Calculamos la puntuación de cada jugador
+        for (Jugador jugador : jugadores) {
+            int casillasFaltantesTotales = 0;
+            
+            // Sumamos lo que le falta a cada una de sus 4 fichas
+            for (Ficha ficha : jugador.obtenerFichas()) {
+                casillasFaltantesTotales += ficha.calcularCasillasFaltantes();
+            }
+            
+            puntajesDesordenados.put(jugador.getIdJugador(), casillasFaltantesTotales);
         }
-        return posiciones;
+
+        // El requerimiento exige orden descendente (el ganador arriba, o sea, el de MENOR puntaje)
+        // Convertimos el mapa a una lista para ordenarlo
+        List<Map.Entry<String, Integer>> listaPuntajes = new LinkedList<>(puntajesDesordenados.entrySet());
+
+        // Ordenamos la lista de menor a mayor (el que le faltan 0 casillas va primero)
+        Collections.sort(listaPuntajes, (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
+
+        // Guardamos el resultado ordenado en un LinkedHashMap para mantener el orden de inserción
+        Map<String, Integer> posicionesOrdenadas = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entrada : listaPuntajes) {
+            posicionesOrdenadas.put(entrada.getKey(), entrada.getValue());
+        }
+
+        return posicionesOrdenadas;
     }
 
     public String obtenerEstadoJuego() {
@@ -121,5 +144,13 @@ public class Juego {
 
     public Turno getTurno() {
         return turno;
+    }
+
+    public List<String> getOpciones() {
+        return opciones;
+    }
+
+    public List<Jugador> getJugadores() {
+        return jugadores;
     }
 }

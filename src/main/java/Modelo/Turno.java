@@ -52,7 +52,13 @@ public class Turno {
 
     public void consumirAccion() {
         if (!this.accionesPendientes.isEmpty()) {
-            this.accionesPendientes.poll(); // Saca la acción de la cola
+            AccionPendiente accion = this.accionesPendientes.poll();
+            // Sobrescribimos el valor del dado con los pasos de la bonificación para que 
+            // ReglasMovimiento y Tablero procesen el avance de 10 o 20 casillas de forma natural
+            this.valorDado = accion.getPasos(); 
+            this.bonificacionPendiente = accion.getPasos();
+        } else {
+            this.bonificacionPendiente = 0;
         }
     }
 
@@ -91,6 +97,12 @@ public class Turno {
     public void habilitaLanzamiento() {
          this.fase = "ESPERANDO_LANZAMIENTO";
          this.valorDado = 0;
+         
+         // Limpiamos el historial si es un turno nuevo y no una repetición
+         if (!this.repeticionPendiente) {
+             this.contadorSeisesConsecutivos = 0;
+             this.ultimaFichaMovida = null;
+         }
     }
 
     public void esperarMovimiento() {

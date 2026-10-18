@@ -12,62 +12,37 @@ import java.util.List;
  * @author Jesús
  */
 public class ReglasMovimiento {
-    // Suponiendo un tablero genérico de 68 casillas por vuelta antes del pasillo de meta
-    private static final int LONGITUD_CARRIL_META = 8; 
+    
+    // Distancia total que recorre una ficha desde su salida hasta el triángulo central
+    private final int DISTANCIA_TOTAL_META = 76; // 68 normales + 8 del carril final
 
     public ReglasMovimiento() {
     }
 
+    /*
+    ORQUESTADOR DE MOVIMIENTOS LEGALES
+    */
+
     public List<String> obtenerFichasMovibles(Juego juego) {
+        // Obtenemos todas las fichas que pueden moverse
         List<String> legales = obtenerMovimientosLegales(juego);
-        // Regla 7: Si hay barrera, es obligatorio mover la ficha que la forma
+        
+        // Regla 7: Filtramos aplicando la obligación de romper barreras
         return filtrarPrioridadBarrera(juego, legales); 
-    }
-
-    public boolean esMovimientoValido(Juego juego, String idFicha) {
-        // Aquí se valida si el camino está libre de barreras enemigas o propias en el trayecto
-        // Una barrera bloquea el camino por completo para cualquier ficha
-        return true; 
-    }
-
-    public int calcularDestino(Juego juego, String idFicha) {
-        int valorDado = juego.obtenerValorDado();
-        // Lógica base: sumar el dado a la posición actual de la ficha
-        int posicionActual = 0; // Se obtendría de la ficha
-        int destinoTeorico = posicionActual + valorDado;
-        
-        // Regla 8: Rebote en la meta
-        int casillasFaltantes = 0; // Se calcularía en base a la posición de meta del color
-        if (valorDado > casillasFaltantes) {
-            int sobrante = valorDado - casillasFaltantes;
-            destinoTeorico = posicionActual + casillasFaltantes - sobrante; // Lógica de rebote hacia atrás
-        }
-        
-        return destinoTeorico;
-    }
-
-    public String obtenerFichaCapturable(Juego juego, String idFicha, int destino) {
-        // Regla 5 y 6: Retorna el ID de la ficha rival si la casilla destino está ocupada por una sola ficha enemiga 
-        // y si no es una casilla segura.
-        boolean esCasillaSegura = false; // Se consultaría al Tablero
-        if (esCasillaSegura) {
-            return null; // No se puede capturar en casilla segura
-        }
-        return "FichaRival_ID"; // Retornaría el ID si aplica
     }
 
     public List<String> obtenerMovimientosLegales(Juego juego) {
         List<String> legales = new ArrayList<>();
-        int valorDado = juego.obtenerValorDado();
         Jugador jugador = juego.obtenerJugadorActual();
-        
+
         for (Ficha f : jugador.obtenerFichas()) {
             if ("EN_BASE".equals(f.getEstado())) {
-                // Regla 3: Se necesita sacar un 5 (o el valor configurado) para salir
+                // Regla 3: Se necesita sacar el valor de salida (5 o el numero especificado) para colocar la ficha
                 if (esSalida(juego, f.getIdFicha())) {
                     legales.add(f.getIdFicha());
                 }
             } else if ("ACTIVA".equals(f.getEstado())) {
+                // Verificamos que el camino no esté bloqueado
                 if (esMovimientoValido(juego, f.getIdFicha())) {
                     legales.add(f.getIdFicha());
                 }
@@ -76,31 +51,140 @@ public class ReglasMovimiento {
         return legales;
     }
 
-    public List<String> filtrarPrioridadBarrera(Juego juego, List<String> legales) {
-        // Regla 7: Si un jugador tiene una barrera en su turno, está obligado a mover una de las fichas de la barrera.
-        List<String> fichasEnBarrera = juego.getTablero().obtenerFichasEnBarrera(juego.obtenerJugadorActual().getIdJugador());
-        
-        if (!fichasEnBarrera.isEmpty()) {
-            List<String> legalesConPrioridad = new ArrayList<>();
-            for (String id : legales) {
-                if (fichasEnBarrera.contains(id)) {
-                    legalesConPrioridad.add(id);
+    /*
+    VALIDACIONES Y CÁLCULOS MATEMÁTICOS
+    */
+
+    public boolean esSalida(Juego juego, String idFicha) {
+        // Requerimiento 1: Por defecto el número para salir es 5
+        int numeroSalida = 5; 
+
+        // Si la lista de opciones existe, buscamos si se configuró un número distinto
+        if (juego.getOpciones()!= null) {
+            for (String opcion : juego.getOpciones()) {
+                if (opcion.startsWith("SALIDA:")) {
+                    numeroSalida = Integer.parseInt(opcion.split(":")[1]);
+                    break;
                 }
             }
-            return !legalesConPrioridad.isEmpty() ? legalesConPrioridad : legales;
+        }
+
+        // Comparamos el valor del dado con el número requerido
+        return juego.obtenerValorDado() == numeroSalida;
+    }
+
+    public boolean esMovimientoValido(Juego juego, String idFicha) {
+        Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
+        int inicio = ficha.getPosicion();
+        int destino = calcularDestino(juego, idFicha);
+        
+        // Regla 7: Ninguna ficha puede pasar sobre una barrera
+        // Tablero deberá iterar entre 'inicio' y 'destino' para asegurar que no hay barreras.
+        return !juego.getTablero().hayBarreraEnCamino(inicio, destino); 
+    }
+
+    public int calcularDestino(Juego juego, String idFicha) {
+        Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
+        int valorDado = juego.obtenerValorDado();
+        int posicionActual = ficha.getPosicion();
+        
+        int destinoTeorico = posicionActual + valorDado;
+        int distanciaRecorrida = ficha.getDistanciaRecorrida();
+        int nuevaDistancia = distanciaRecorrida + valorDado;
+
+        // Regla 8: Rebote en la meta si el número no es exacto[cite: 2]
+        if (nuevaDistancia > DISTANCIA_TOTAL_META) {
+            int casillasSobrantes = nuevaDistancia - DISTANCIA_TOTAL_META;
+            // Se calcula el rebote retrocediendo las casillas sobrantes[cite: 2]
+            destinoTeorico = posicionActual + (valorDado - casillasSobrantes) - casillasSobrantes; 
+        }
+
+        return destinoTeorico;
+    }
+
+    /*
+    CAPTURAS Y BARRERAS
+    */
+
+    public String obtenerFichaCapturable(Juego juego, String idFichaActual, int destino) {
+        Tablero tablero = juego.getTablero();
+        
+        // Regla 6: Si es casilla segura (marcada con círculo), no hay captura[cite: 2]
+        if (tablero.esCasillaSegura(destino)) {
+            return null;
+        }
+
+        List<Ficha> fichasEnDestino = tablero.obtenerFichasEnCasilla(destino);
+        
+        // Regla 5: Captura si hay exactamente 1 ficha en la casilla y es rival[cite: 2]
+        if (fichasEnDestino.size() == 1) {
+            Ficha fichaRival = fichasEnDestino.get(0);
+            Jugador jugadorActual = juego.obtenerJugadorActual();
+            
+            // Verificamos que la ficha encontrada no pertenezca al jugador en turno
+            if (!perteneceAlJugador(jugadorActual, fichaRival.getIdFicha())) {
+                return fichaRival.getIdFicha();
+            }
+        }
+        return null;
+    }
+    
+    public boolean esLlegadaExacta(Juego juego, String idFicha, int destino) {
+        Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
+        
+        // Si la ficha no fue encontrada, no es un movimiento válido
+        if (ficha == null) {
+            return false;
+        }
+
+        int valorDado = juego.obtenerValorDado();
+        int posicionActual = ficha.getPosicion();
+        
+        // Calculamos la distancia total que llevaría la ficha con este movimiento
+        int distanciaRecorrida = ficha.getDistanciaRecorrida();
+        int nuevaDistancia = distanciaRecorrida + valorDado;
+
+        // Regla 8: Verifica si el número del dado permite llegar exactamente al triángulo central
+        // Comparamos la distancia que alcanzaría con la distancia total requerida para llegar a la meta
+        return nuevaDistancia == DISTANCIA_TOTAL_META; 
+    }
+
+    public List<String> filtrarPrioridadBarrera(Juego juego, List<String> legales) {
+        Jugador actual = juego.obtenerJugadorActual();
+        // Le preguntamos al tablero si el jugador tiene fichas formando barrera
+        List<String> fichasEnBarrera = juego.getTablero().obtenerFichasEnBarrera(actual.getIdJugador());
+
+        // Regla 7: Si un jugador tiene una barrera, está obligado a mover una ficha de ella
+        if (!fichasEnBarrera.isEmpty()) {
+            List<String> legalesObligatorios = new ArrayList<>();
+            for (String id : legales) {
+                if (fichasEnBarrera.contains(id)) {
+                    legalesObligatorios.add(id);
+                }
+            }
+            // Si al menos una ficha de la barrera se puede mover, forzamos esa lista
+            if (!legalesObligatorios.isEmpty()) {
+                return legalesObligatorios;
+            }
         }
         return legales;
     }
 
-    public boolean esSalida(Juego juego, String idFicha) {
-        // Regla 1 y 3: Evalúa si el dado cumple con el requisito para sacar una ficha de la base
-        // Por defecto es 5, pero esto es configurable al inicio.
-        int valorParaSalir = 5; // En una versión final, este valor se saca de las 'opciones' de Juego
-        return juego.obtenerValorDado() == valorParaSalir;
+    /*
+    MÉTODOS AUXILIARES (Uso interno)
+    */
+    
+    private Ficha obtenerFichaDelJugador(Juego juego, String idFicha) {
+        for (Ficha f : juego.obtenerJugadorActual().obtenerFichas()) {
+            if (f.getIdFicha().equals(idFicha)) return f;
+        }
+        return null;
     }
 
-    public boolean esLlegadaExacta(Juego juego, String idFicha, int destino) {
-        // Regla 8: Verifica si el número del dado permite llegar exactamente al triángulo central
-        return true; // Implementación matemática dependiente de los índices de la meta
+    private boolean perteneceAlJugador(Jugador jugador, String idFicha) {
+        for (Ficha f : jugador.obtenerFichas()) {
+            if (f.getIdFicha().equals(idFicha)) return true;
+        }
+        return false;
     }
 }

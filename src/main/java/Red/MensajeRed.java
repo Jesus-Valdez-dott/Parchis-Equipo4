@@ -4,24 +4,21 @@
  */
 package Red;
 
+import java.io.Serializable;
+
 /**
  *
  * @author Jesús
  */
-public class MensajeRed {
+public abstract class MensajeRed implements Serializable{
     private String idJugadorEmisor;
-    private String tipo;
+    private String tipoMensaje; // Nombre exacto del UML
 
-    public MensajeRed(String idJugadorEmisor, String tipo) {
+    public MensajeRed(String idJugadorEmisor, String tipoMensaje) {
         this.idJugadorEmisor = idJugadorEmisor;
-        this.tipo = tipo;
+        this.tipoMensaje = tipoMensaje;
     }
 
-    public String getIdJugadorEmisor() {
-        return idJugadorEmisor;
-    }
-
-    public String getTipo() {
-        return tipo;
-    }
+    public String getIdJugadorEmisor() { return idJugadorEmisor; }
+    public String getTipoMensaje() { return tipoMensaje; }
 }

@@ -27,7 +27,8 @@ public class Jugador {
         
         // Inicializamos las 4 fichas requeridas para cada jugador
         for (int i = 1; i <= 4; i++) {
-            this.fichas.add(new Ficha(idJugador + "_F" + i));
+            // Le pasamos el color a cada ficha al momento de crearla
+            this.fichas.add(new Ficha(idJugador + "_F" + i, color)); 
         }
     }
 

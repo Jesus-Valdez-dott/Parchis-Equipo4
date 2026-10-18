@@ -9,14 +9,12 @@ package Red;
  * @author Jesús
  */
 public class MensajeDado extends MensajeRed{
-    private int valorDado;
+    private int valorDado; // Nombre exacto del UML
 
     public MensajeDado(String idJugadorEmisor, int valorDado) {
         super(idJugadorEmisor, "LANZAMIENTO_DADO");
         this.valorDado = valorDado;
     }
 
-    public int getValorDado() {
-        return valorDado;
-    }
+    public int getValorDado() { return valorDado; }
 }
