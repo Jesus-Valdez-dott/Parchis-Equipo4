@@ -10,4 +10,22 @@
         <maven.compiler.release>23</maven.compiler.release>
         <exec.mainClass>com.mycompany.parchis.Parchis</exec.mainClass>
     </properties>
+    <build>
+        <!-- Genera target/Parchis.jar: el mismo jar lo ejecutan todos los peers -->
+        <finalName>Parchis</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.mycompany.parchis.Parchis</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
