@@ -121,6 +121,28 @@ public class Juego {
         return colores;
     }
 
+    public Map<String, String> obtenerNombresJugadores() {
+        Map<String, String> nombres = new LinkedHashMap<>();
+        for (Jugador jugador : jugadores) {
+            nombres.put(jugador.getIdJugador(), jugador.getNombre());
+        }
+        return nombres;
+    }
+
+    /** El avatar se guarda como texto ("avatar1".."avatar12"); aquí se pasa a número 0..11. */
+    public Map<String, Integer> obtenerAvataresJugadores() {
+        Map<String, Integer> avatares = new LinkedHashMap<>();
+        for (Jugador jugador : jugadores) {
+            int indice = 0;
+            String a = jugador.getAvatar();
+            if (a != null && a.matches("avatar\\d+")) {
+                indice = Integer.parseInt(a.substring(6)) - 1;
+            }
+            avatares.put(jugador.getIdJugador(), indice);
+        }
+        return avatares;
+    }
+
     public String obtenerEstadoJuego() {
         return estado.name();
     }

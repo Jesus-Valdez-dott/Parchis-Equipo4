@@ -101,10 +101,11 @@ public class ModeloPresentacion {
     public synchronized DatosVista obtenerDatosVista() {
         if (estado == null) {
             return new DatosVista(miIdJugador, false, 0, null, null, null, null,
-                    null, null, aviso, version);
+                    null, null, null, null, aviso, version);
         }
         return new DatosVista(miIdJugador, true, estado.getValorDado(), estado.getJugadorActual(),
                 estado.getFichasMovibles(), estado.getPosiciones(), estado.getColoresJugadores(),
+                estado.getNombresJugadores(), estado.getAvataresJugadores(),
                 estado.getEstadoJuego(), estado.getGanador(), aviso, version);
     }
 

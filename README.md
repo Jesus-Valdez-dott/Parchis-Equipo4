@@ -20,13 +20,35 @@ Puerto por defecto: 5000.
 
 | Paquete | Clases | Depende de |
 |---|---|---|
-| `Presentacion` | `PantallaPartida` «view», `PanelTablero`, `ControladorJuego` «controller», `ModeloPresentacion` «model», `ObservadorModelo`, `DatosVista` | Aplicacion |
+| `Presentacion` | `PantallaPartida` «view», `PanelTablero`, `ControladorJuego` «controller», `ModeloPresentacion` «model», `ObservadorModelo`, `DatosVista`, las demás pantallas (ver abajo) | Aplicacion |
 | `Aplicacion` | `GestorJuego`, `IPresentacionJuego`, `EstadoPartidaDTO`, `TipoAccion` | Dominio, Infraestructura |
 | `Dominio` | `IFachadaPartida`, `FachadaPartida` «facade», `ResultadoAccion`, `Juego`, `Turno`, `Tablero`, `Casilla`, `Ficha`, `Jugador`, `Dado`, `ReglasMovimiento`, `AccionPendiente`, ... | — |
 | `Infraestructura` | `IGestorRed`, `INotificadorRed`, `MensajeRed` + `Solicitud`, `ConfirmacionAccion`, `RechazoAccion` (**`GestorRed` pendiente**) | — |
 
 `IPresentacionJuego` vive en Aplicación y la implementa `ControladorJuego`. Así el GestorJuego le entrega
 estados y rechazos al controlador sin que Aplicación dependa de Presentación.
+
+## Pantallas (storyboard)
+Todas las pantallas del storyboard ya existen **sin lógica**: cada CU conecta sus botones
+(`getBotonX().addActionListener(...)`) y llama a los métodos para mostrar datos.
+
+| Pantalla | Clase | Lo usa el CU |
+|---|---|---|
+| Inicio | `PantallaInicio` | todos (navegación) |
+| Configuración de la partida | `PantallaConfiguracionPartida` | Configurar / crear partida |
+| Unirse a partida | `PantallaUnirsePartida` (+ `TarjetaPartida`) | Unirse a partida |
+| Personalizar nombre / avatar / color | `PantallaPersonalizarNombre`, `PantallaPersonalizarAvatar`, `PantallaPersonalizarColor` | Personalizar |
+| Lobby | `PantallaLobby` (+ `TarjetaJugadorLobby`, `Notificacion`) | Unirse / Iniciar partida |
+| Partida en curso | `PantallaPartida` (con lógica de Ejecutar turno) | Ejecutar turno |
+| Resultados | `PantallaResultados` | Finalizar partida |
+
+- `VentanaParchis.mostrar(pantalla)` cambia la pantalla que se ve.
+- Para verlas sin jugar: ejecutar `com.mycompany.parchis.VistaPreviaPantallas` (clic derecho → Run File).
+- Los componentes reutilizables están en `Presentacion.componentes` y los colores/fuentes en `Presentacion.estilo.Estilo`.
+- Todo se dibuja en coordenadas del storyboard (1200 × 675) y se escala con la ventana.
+- **Avatares:** por ahora son dibujos de ejemplo. Para usar imágenes, poner `avatar1.png` ... `avatar12.png` en
+  `src/main/resources/avatares/` (cuadradas; se recortan en círculo solas).
+- **Fuentes:** Lilita One (títulos) y Roboto (texto), libres (licencia OFL), en `src/main/resources/fuentes/`.
 
 ## Estado de la red
 `Infraestructura.GestorRed` (sockets TCP) está pendiente. Mientras tanto, `com.mycompany.parchis.RedLocalSimulada`

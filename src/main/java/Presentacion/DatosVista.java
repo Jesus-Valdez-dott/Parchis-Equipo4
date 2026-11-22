@@ -22,6 +22,8 @@ public final class DatosVista {
     private final List<String> fichasMovibles;
     private final Map<String, Integer> posiciones;
     private final Map<String, String> coloresJugadores;
+    private final Map<String, String> nombresJugadores;
+    private final Map<String, Integer> avataresJugadores;
     private final String estadoJuego;
     private final String ganador;
     private final String aviso;
@@ -29,7 +31,8 @@ public final class DatosVista {
 
     DatosVista(String miIdJugador, boolean hayEstado, int valorDado, String jugadorActual,
             List<String> fichasMovibles, Map<String, Integer> posiciones,
-            Map<String, String> coloresJugadores, String estadoJuego, String ganador,
+            Map<String, String> coloresJugadores, Map<String, String> nombresJugadores,
+            Map<String, Integer> avataresJugadores, String estadoJuego, String ganador,
             String aviso, int version) {
         this.miIdJugador = miIdJugador;
         this.hayEstado = hayEstado;
@@ -38,6 +41,8 @@ public final class DatosVista {
         this.fichasMovibles = fichasMovibles != null ? fichasMovibles : Collections.emptyList();
         this.posiciones = posiciones != null ? posiciones : new LinkedHashMap<>();
         this.coloresJugadores = coloresJugadores != null ? coloresJugadores : new HashMap<>();
+        this.nombresJugadores = nombresJugadores != null ? nombresJugadores : new HashMap<>();
+        this.avataresJugadores = avataresJugadores != null ? avataresJugadores : new HashMap<>();
         this.estadoJuego = estadoJuego;
         this.ganador = ganador;
         this.aviso = aviso;
@@ -69,6 +74,8 @@ public final class DatosVista {
     public List<String> getFichasMovibles() { return fichasMovibles; }
     public Map<String, Integer> getPosiciones() { return posiciones; }
     public Map<String, String> getColoresJugadores() { return coloresJugadores; }
+    public Map<String, String> getNombresJugadores() { return nombresJugadores; }
+    public Map<String, Integer> getAvataresJugadores() { return avataresJugadores; }
     public String getEstadoJuego() { return estadoJuego; }
     public String getGanador() { return ganador; }
     public String getAviso() { return aviso; }

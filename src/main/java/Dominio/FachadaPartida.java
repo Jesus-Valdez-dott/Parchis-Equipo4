@@ -183,6 +183,16 @@ public class FachadaPartida implements IFachadaPartida {
     }
 
     @Override
+    public synchronized Map<String, String> obtenerNombresJugadores() {
+        return juego.obtenerNombresJugadores();
+    }
+
+    @Override
+    public synchronized Map<String, Integer> obtenerAvataresJugadores() {
+        return juego.obtenerAvataresJugadores();
+    }
+
+    @Override
     public synchronized String obtenerEstadoJuego() {
         return juego.obtenerEstadoJuego();
     }

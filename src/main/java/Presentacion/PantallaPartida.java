@@ -1,75 +1,70 @@
 package Presentacion;
 
 import Aplicacion.TipoAccion;
-import java.awt.BorderLayout;
+import Presentacion.componentes.Avatar;
+import Presentacion.componentes.Dado;
+import Presentacion.componentes.Etiqueta;
+import Presentacion.componentes.MensajeSuperpuesto;
+import Presentacion.componentes.PanelDiseno;
+import Presentacion.estilo.Estilo;
 import java.awt.Color;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
 import java.util.Map;
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
 /**
- * «view» del MVC (capa de Presentación).
- * - Lo que hace el jugador se lo pasa al ControladorJuego (diagrama 3, paso 2).
+ * «view» del MVC (capa de Presentación). Diseño del storyboard: tablero al
+ * centro, cada jugador en la esquina de su color y el dado junto a quien tiene
+ * el turno.
+ *
+ * - Lo que hace el jugador se lo pasa al ControladorJuego (diagrama 3, paso 2):
+ *   clic en el dado = lanzar; clic en una ficha resaltada = moverla.
  * - Observa al ModeloPresentacion: cuando este avisa, le pide los datos y se
  *   redibuja (diagrama 4, pasos 13-15 y 31).
  *
  * @author Jesús
  */
-public class PantallaPartida extends JFrame implements ObservadorModelo {
+public class PantallaPartida extends PanelDiseno implements ObservadorModelo {
 
     private static final long serialVersionUID = 1L;
+
+    /** Esquinas en orden: arriba-izq, arriba-der, abajo-izq, abajo-der. */
+    private static final String[] COLOR_ESQUINA = {"ROJO", "AZUL", "VERDE", "AMARILLO"};
+    private static final boolean[] ESQUINA_ARRIBA = {true, true, false, false};
+    private static final int[] X_ESQUINA = {0, 938, 0, 938};
 
     private final transient ControladorJuego controlador;
     private final transient ModeloPresentacion modelo;
 
-    private final JLabel lblTurno = new JLabel("Conectando con el Host...");
-    private final JLabel lblDado = new JLabel("Dado: -");
-    private final JLabel lblAviso = new JLabel(" ");
-    private final JButton btnLanzar = new JButton("Lanzar dado");
-    private final JPanel panelFichas = new JPanel(new GridLayout(1, 4, 6, 6));
     private final PanelTablero panelTablero = new PanelTablero();
+    private final Etiqueta[] nombres = new Etiqueta[4];
+    private final Avatar[] avatares = new Avatar[4];
+    private final Dado[] dados = new Dado[4];
+    private final Etiqueta[] indicaciones = new Etiqueta[4];
+    private final MensajeSuperpuesto mensaje = new MensajeSuperpuesto();
 
-    public PantallaPartida(ControladorJuego controlador, ModeloPresentacion modelo, String titulo) {
+    public PantallaPartida(ControladorJuego controlador, ModeloPresentacion modelo) {
         this.controlador = controlador;
         this.modelo = modelo;
-
-        setTitle("Parchís - " + titulo);
-        setSize(560, 720);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         inicializarComponentes();
-        btnLanzar.setEnabled(false);
     }
 
     private void inicializarComponentes() {
-        lblDado.setFont(lblDado.getFont().deriveFont(Font.BOLD, 22f));
-        lblAviso.setForeground(new Color(180, 0, 0));
-        btnLanzar.addActionListener(e -> solicitarLanzamiento());
+        agregar(mensaje, 210, 192, 780, 222);
+        for (int i = 0; i < 4; i++) {
+            int x = X_ESQUINA[i];
+            boolean arriba = ESQUINA_ARRIBA[i];
+            nombres[i] = agregar(new Etiqueta("", Etiqueta.Tipo.NEGRITA, 18, Color.WHITE), x, arriba ? 6 : 634, 262, 28);
+            avatares[i] = agregar(new Avatar(0), x + 64, arriba ? 38 : 500, 132, 132);
+            avatares[i].setCursor(null);
+            dados[i] = agregar(new Dado(), x + 94, arriba ? 176 : 413, 72, 82);
+            dados[i].setPiquitoAbajo(!arriba);
+            dados[i].addActionListener(e -> solicitarLanzamiento());
+            indicaciones[i] = agregar(new Etiqueta("", Etiqueta.Tipo.TEXTO, 12, new Color(0xE8, 0xDC, 0xF0)),
+                    x, arriba ? 262 : 386, 262, 22);
+        }
+        agregar(panelTablero, 263, 0, 675, 675);
         panelTablero.setAlSeleccionarFicha(this::seleccionarFicha);
-
-        JPanel arriba = new JPanel(new GridLayout(3, 1));
-        arriba.add(lblTurno);
-        JPanel filaDado = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        filaDado.add(btnLanzar);
-        filaDado.add(lblDado);
-        arriba.add(filaDado);
-        arriba.add(lblAviso);
-
-        panelFichas.setBorder(BorderFactory.createTitledBorder("Mis fichas"));
-
-        JPanel centro = new JPanel(new BorderLayout());
-        centro.add(panelFichas, BorderLayout.NORTH);
-        centro.add(panelTablero, BorderLayout.CENTER);
-
-        getContentPane().setLayout(new BorderLayout(6, 6));
-        getContentPane().add(arriba, BorderLayout.NORTH);
-        getContentPane().add(centro, BorderLayout.CENTER);
+        redibujar();
     }
 
     // ==========================================
@@ -95,7 +90,13 @@ public class PantallaPartida extends JFrame implements ObservadorModelo {
 
     @Override
     public void notificarAviso() {
-        enHiloSwing(this::redibujar);
+        enHiloSwing(() -> {
+            redibujar();
+            String aviso = modelo.obtenerDatosVista().getAviso();
+            if (aviso != null) {
+                mensaje.mostrar(aviso, 2500);
+            }
+        });
     }
 
     private void enHiloSwing(Runnable r) {
@@ -108,35 +109,48 @@ public class PantallaPartida extends JFrame implements ObservadorModelo {
 
     private void redibujar() {
         DatosVista datos = modelo.obtenerDatosVista();
-        mostrarResultadoDado(datos);
-        mostrarTurno(datos);
+        mostrarJugadores(datos);
+        mostrarDado(datos);
         actualizarTablero(datos);
-        habilitarFichasMovibles(datos);
-        mostrarAviso(datos.getAviso());
+        mostrarEstadoGeneral(datos);
     }
 
     // ==========================================
     // DIBUJO
     // ==========================================
 
-    private void mostrarResultadoDado(DatosVista datos) {
-        lblDado.setText(datos.getValorDado() > 0 ? "Dado: " + datos.getValorDado() : "Dado: -");
+    /** Cada jugador aparece en la esquina de su color; las esquinas sin jugador se ocultan. */
+    private void mostrarJugadores(DatosVista datos) {
+        for (int i = 0; i < 4; i++) {
+            String id = jugadorDeColor(datos, COLOR_ESQUINA[i]);
+            boolean hay = id != null;
+            nombres[i].setVisible(hay);
+            avatares[i].setVisible(hay);
+            if (hay) {
+                String nombre = datos.getNombresJugadores().getOrDefault(id, id);
+                nombres[i].setText(id.equals(datos.getMiIdJugador()) ? nombre + " (tú)" : nombre);
+                avatares[i].setIndice(datos.getAvataresJugadores().getOrDefault(id, 0));
+                avatares[i].setResaltado(datos.isEnCurso() && id.equals(datos.getJugadorActual()));
+            }
+        }
     }
 
-    private void mostrarTurno(DatosVista datos) {
-        if (!datos.isHayEstado()) {
-            lblTurno.setText("Conectando con el Host...");
-        } else if ("FINALIZADO".equals(datos.getEstadoJuego())) {
-            boolean gane = datos.getMiIdJugador().equals(datos.getGanador());
-            lblTurno.setText(gane ? "¡Ganaste la partida!" : "Partida terminada. Ganó " + datos.getGanador());
-        } else if (!datos.isEnCurso()) {
-            lblTurno.setText("Estado: " + datos.getEstadoJuego());
-        } else if (datos.isMiTurno()) {
-            lblTurno.setText(datos.isPuedeLanzar() ? "Tu turno: lanza el dado" : "Tu turno: elige una ficha");
-        } else {
-            lblTurno.setText("Turno de " + datos.getJugadorActual());
+    /** El dado aparece solo junto al jugador en turno. */
+    private void mostrarDado(DatosVista datos) {
+        for (int i = 0; i < 4; i++) {
+            String id = jugadorDeColor(datos, COLOR_ESQUINA[i]);
+            boolean enTurno = datos.isEnCurso() && id != null && id.equals(datos.getJugadorActual());
+            dados[i].setVisible(enTurno);
+            dados[i].setValor(datos.getValorDado());
+            dados[i].setEnabled(datos.isPuedeLanzar());
+            dados[i].setDestacado(enTurno && datos.isPuedeLanzar());
+            String texto = "";
+            if (enTurno && datos.isMiTurno()) {
+                texto = datos.isPuedeLanzar() ? "Haz clic en el dado para lanzar" : "Elige una ficha resaltada";
+            }
+            indicaciones[i].setText(texto);
+            indicaciones[i].setVisible(enTurno);
         }
-        btnLanzar.setEnabled(datos.isPuedeLanzar());
     }
 
     private void actualizarTablero(DatosVista datos) {
@@ -144,38 +158,24 @@ public class PantallaPartida extends JFrame implements ObservadorModelo {
                 datos.getFichasSeleccionables());
     }
 
-    private void habilitarFichasMovibles(DatosVista datos) {
-        panelFichas.removeAll();
-        String prefijo = datos.getMiIdJugador() + "_F";
-        for (Map.Entry<String, Integer> e : datos.getPosiciones().entrySet()) {
-            if (!e.getKey().startsWith(prefijo)) {
-                continue;
+    private void mostrarEstadoGeneral(DatosVista datos) {
+        if (!datos.isHayEstado()) {
+            mensaje.mostrar("Conectando con el Host...", 0);
+        } else if ("FINALIZADO".equals(datos.getEstadoJuego())) {
+            boolean gane = datos.getMiIdJugador().equals(datos.getGanador());
+            String ganador = datos.getNombresJugadores().getOrDefault(datos.getGanador(), datos.getGanador());
+            mensaje.mostrar(gane ? "¡Ganaste la partida!" : "Partida terminada. Ganó " + ganador, 0);
+        } else if (datos.getAviso() == null) {
+            mensaje.ocultar();
+        }
+    }
+
+    private static String jugadorDeColor(DatosVista datos, String color) {
+        for (Map.Entry<String, String> e : datos.getColoresJugadores().entrySet()) {
+            if (color.equals(e.getValue())) {
+                return e.getKey();
             }
-            String idFicha = e.getKey();
-            JButton btn = new JButton("<html><center>F" + idFicha.substring(prefijo.length())
-                    + "<br>" + describirPosicion(e.getValue()) + "</center></html>");
-            btn.setEnabled(datos.getFichasSeleccionables().contains(idFicha));
-            btn.addActionListener(ev -> seleccionarFicha(idFicha));
-            panelFichas.add(btn);
         }
-        panelFichas.revalidate();
-        panelFichas.repaint();
-    }
-
-    private void mostrarAviso(String aviso) {
-        lblAviso.setText(aviso != null ? aviso : " ");
-    }
-
-    private String describirPosicion(int pos) {
-        if (pos < 0) {
-            return "Base";
-        }
-        if (pos <= 68) {
-            return "Casilla " + pos;
-        }
-        if (pos < 76) {
-            return "Pasillo " + (pos - 68);
-        }
-        return "META";
+        return null;
     }
 }

@@ -9,6 +9,7 @@ import Infraestructura.IGestorRed;
 import Presentacion.ControladorJuego;
 import Presentacion.ModeloPresentacion;
 import Presentacion.PantallaPartida;
+import Presentacion.VentanaParchis;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -69,7 +70,7 @@ public class Parchis {
     }
 
     /** Peer Host: tiene la partida (Dominio) y abre el puerto para los demás. */
-    public static PantallaPartida crearHost(int numJugadores, int puerto) throws Exception {
+    public static VentanaParchis crearHost(int numJugadores, int puerto) throws Exception {
         // Dominio (esto lo harán los CU de configurar/unirse/iniciar partida)
         Juego juego = new Juego("PARTIDA_PARCHIS_01");
         for (int i = 1; i <= numJugadores; i++) {
@@ -80,17 +81,17 @@ public class Parchis {
 
         // Infraestructura + Aplicación + Presentación
         GestorJuego gestorJuego = new GestorJuego("J1", crearRed(), fachada);
-        PantallaPartida vista = armarPresentacion(gestorJuego, "J1 (Host)");
+        VentanaParchis ventana = armarPresentacion(gestorJuego, "J1 (Host)");
         gestorJuego.iniciarComoHost(puerto);
-        return vista;
+        return ventana;
     }
 
     /** Peer cliente: no modifica la partida; pide acciones al Host. */
-    public static PantallaPartida crearCliente(String idJugador, String ipHost, int puerto) throws Exception {
+    public static VentanaParchis crearCliente(String idJugador, String ipHost, int puerto) throws Exception {
         GestorJuego gestorJuego = new GestorJuego(idJugador, crearRed(), null);
-        PantallaPartida vista = armarPresentacion(gestorJuego, idJugador);
+        VentanaParchis ventana = armarPresentacion(gestorJuego, idJugador);
         gestorJuego.unirseAPartida(ipHost, puerto);
-        return vista;
+        return ventana;
     }
 
     /**
@@ -102,22 +103,25 @@ public class Parchis {
     }
 
     /** Capa de Presentación (MVC): modelo, controlador y vista observando al modelo. */
-    private static PantallaPartida armarPresentacion(GestorJuego gestorJuego, String titulo) {
+    private static VentanaParchis armarPresentacion(GestorJuego gestorJuego, String titulo) {
         ModeloPresentacion modelo = new ModeloPresentacion(gestorJuego.getIdJugadorLocal());
         ControladorJuego controlador = new ControladorJuego(modelo, gestorJuego);
-        PantallaPartida vista = new PantallaPartida(controlador, modelo, titulo);
+        PantallaPartida vista = new PantallaPartida(controlador, modelo);
         modelo.agregarObservador(vista);
-        return vista;
+        VentanaParchis ventana = new VentanaParchis("Parchís - " + titulo);
+        ventana.mostrar(vista);
+        return ventana;
     }
 
     /** Requerimiento 2: para efectos de prueba, todos los jugadores en el mismo equipo. */
     private static void demoLocal(int numJugadores, int puerto) throws Exception {
-        PantallaPartida host = crearHost(numJugadores, puerto);
-        host.setLocation(20, 20);
+        // Ventanas más chicas para que quepan varias en la pantalla (todo se escala)
+        VentanaParchis host = crearHost(numJugadores, puerto);
+        host.setBounds(10, 10, 680, 410);
         host.setVisible(true);
         for (int i = 2; i <= numJugadores; i++) {
-            PantallaPartida cliente = crearCliente("J" + i, "localhost", puerto);
-            cliente.setLocation(20 + ((i - 1) % 2) * 570, 20 + ((i - 1) / 2) * 400);
+            VentanaParchis cliente = crearCliente("J" + i, "localhost", puerto);
+            cliente.setBounds(10 + ((i - 1) % 2) * 690, 10 + ((i - 1) / 2) * 420, 680, 410);
             cliente.setVisible(true);
         }
     }

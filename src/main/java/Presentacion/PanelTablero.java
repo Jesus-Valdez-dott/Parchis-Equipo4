@@ -26,8 +26,9 @@ import java.util.function.Consumer;
 import javax.swing.JPanel;
 
 /**
- * Dibuja el tablero como la Fig. 1 del documento del juego: casillas 1..68,
- * círculos de salida en las esquinas, pasillos de 7 casillas y la meta central.
+ * Dibuja el tablero: numeración, salidas y colores de la Fig. 1 del documento
+ * del juego, con el estilo del storyboard (marco crema y esquinas cuadradas
+ * con un cuadro blanco donde esperan las fichas).
  *
  * Geometría: el tablero mide 21 unidades (u). Cada brazo de la cruz mide 7u de
  * ancho (3 columnas) y 8 filas de 1u (la fila más interna es un trapecio). El
@@ -42,11 +43,14 @@ public class PanelTablero extends JPanel {
     private static final long serialVersionUID = 1L;
 
     // Colores del tablero (Fig. 1)
-    static final Color ROJO = new Color(237, 50, 45);
-    static final Color AZUL = new Color(85, 160, 240);
-    static final Color VERDE = new Color(110, 200, 80);
-    static final Color AMARILLO = new Color(245, 235, 60);
-    private static final Color GRIS_SEGURO = new Color(215, 215, 215);
+    // Tonos del storyboard
+    static final Color ROJO = new Color(0xD3, 0x2F, 0x2F);
+    static final Color AZUL = new Color(0x2C, 0x6E, 0xC6);
+    static final Color VERDE = new Color(0x23, 0x92, 0x4B);
+    static final Color AMARILLO = new Color(0xF2, 0xC7, 0x26);
+    /** El storyboard no muestra números en las casillas; ponerlo en true ayuda a depurar. */
+    private static final boolean MOSTRAR_NUMEROS = false;
+    private static final Color CREMA = new Color(0xF5, 0xE9, 0xD0);
 
     private static final int UNIDADES = 21;
     /** Brazos en orden de rotación: 0 arriba, 1 derecha, 2 abajo, 3 izquierda. */
@@ -66,7 +70,7 @@ public class PanelTablero extends JPanel {
     private Consumer<String> alSeleccionarFicha = id -> { };
 
     public PanelTablero() {
-        setBackground(Color.WHITE);
+        setOpaque(false);
         addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -99,8 +103,12 @@ public class PanelTablero extends JPanel {
     private double u;          // tamaño de la unidad en píxeles
     private double ox, oy;     // esquina superior izquierda del tablero
 
+    private double marco;      // grosor del marco crema
+
     private void calcularEscala() {
-        double lado = Math.min(getWidth(), getHeight()) - 4;
+        double total = Math.min(getWidth(), getHeight());
+        marco = total * 0.025;
+        double lado = total - 2 * marco;
         u = lado / UNIDADES;
         ox = (getWidth() - lado) / 2;
         oy = (getHeight() - lado) / 2;
@@ -233,43 +241,59 @@ public class PanelTablero extends JPanel {
             return;
         }
 
+        // Marco crema con borde oscuro
+        double lado = UNIDADES * u;
+        g.setColor(CREMA);
+        g.fill(new java.awt.geom.RoundRectangle2D.Double(ox - marco, oy - marco, lado + 2 * marco, lado + 2 * marco, marco, marco));
+        g.setColor(new Color(0x42, 0x2F, 0x33));
+        g.setStroke(new BasicStroke((float) Math.max(1.5, marco * 0.25)));
+        g.draw(new java.awt.geom.RoundRectangle2D.Double(ox - marco, oy - marco, lado + 2 * marco, lado + 2 * marco, marco, marco));
+        g.setColor(Color.WHITE);
+        g.fill(new Rectangle2D.Double(ox, oy, lado, lado));
+
         dibujarBases(g);
         dibujarCasillas(g);
         dibujarPasillosYMeta(g);
-        g.setColor(new Color(110, 80, 40));
-        g.setStroke(new BasicStroke((float) Math.max(2, u * 0.15)));
-        g.draw(new Rectangle2D.Double(ox, oy, UNIDADES * u, UNIDADES * u));
+        g.setColor(new Color(0x42, 0x2F, 0x33));
+        g.setStroke(new BasicStroke((float) Math.max(1.5, u * 0.08)));
+        g.draw(new Rectangle2D.Double(ox, oy, lado, lado));
         dibujarFichas(g);
         g.dispose();
     }
 
+    /** Esquinas del storyboard: cuadro de color con un cuadro blanco y 4 lugares para las fichas. */
     private void dibujarBases(Graphics2D g) {
         for (String color : COLOR_BRAZO) {
             Point2D c = centroBase(color);
-            double r = 3 * u;
+            double x0 = c.getX() - 3.5 * u, y0 = c.getY() - 3.5 * u;
+            Rectangle2D esquina = new Rectangle2D.Double(x0, y0, 7 * u, 7 * u);
             g.setColor(colorAwt(color));
-            g.fill(new Ellipse2D.Double(c.getX() - r, c.getY() - r, 2 * r, 2 * r));
-            g.setColor(Color.DARK_GRAY);
-            g.setStroke(new BasicStroke(1f));
-            g.draw(new Ellipse2D.Double(c.getX() - r, c.getY() - r, 2 * r, 2 * r));
-            g.setColor(Color.WHITE);
-            g.setStroke(new BasicStroke((float) Math.max(1, u * 0.08)));
-            double r2 = 2.1 * u;
-            g.draw(new Ellipse2D.Double(c.getX() - r2, c.getY() - r2, 2 * r2, 2 * r2));
+            g.fill(esquina);
+            g.setColor(new Color(0x42, 0x2F, 0x33));
+            g.setStroke(new BasicStroke((float) Math.max(1, u * 0.06)));
+            g.draw(esquina);
 
-            String jugador = jugadorDeColor(color);
-            if (jugador != null) {
-                g.setFont(getFont().deriveFont(Font.BOLD, (float) (u * 0.7)));
+            java.awt.geom.RoundRectangle2D blanco = new java.awt.geom.RoundRectangle2D.Double(
+                    c.getX() - 2.2 * u, c.getY() - 2.2 * u, 4.4 * u, 4.4 * u, u * 0.8, u * 0.8);
+            g.setColor(Color.WHITE);
+            g.fill(blanco);
+            g.setColor(new Color(0x42, 0x2F, 0x33));
+            g.draw(blanco);
+
+            // Lugares vacíos (las fichas en base se dibujan encima)
+            for (int n = 0; n < 4; n++) {
+                Point2D p = lugarEnBase(c, n);
+                double r = u * 0.48;
                 g.setColor(Color.BLACK);
-                FontMetrics fm = g.getFontMetrics();
-                // etiqueta en la esquina exterior de su cuadro
-                boolean izquierda = c.getX() < ox + UNIDADES * u / 2;
-                boolean arriba = c.getY() < oy + UNIDADES * u / 2;
-                double tx = izquierda ? ox + u * 0.25 : ox + UNIDADES * u - u * 0.25 - fm.stringWidth(jugador);
-                double ty = arriba ? oy + u * 0.25 + fm.getAscent() : oy + UNIDADES * u - u * 0.3;
-                g.drawString(jugador, (float) tx, (float) ty);
+                g.fill(new Ellipse2D.Double(p.getX() - r, p.getY() - r, 2 * r, 2 * r));
             }
         }
+    }
+
+    /** Centro del lugar n (0..3) dentro del cuadro blanco de la esquina. */
+    private Point2D lugarEnBase(Point2D centro, int n) {
+        double d = 1.1 * u;
+        return new Point2D.Double(centro.getX() + ((n % 2 == 0) ? -d : d), centro.getY() + ((n < 2) ? -d : d));
     }
 
     private void dibujarCasillas(Graphics2D g) {
@@ -286,18 +310,20 @@ public class PanelTablero extends JPanel {
             Rectangle2D b = s.getBounds2D();
             double cx = b.getCenterX(), cy = b.getCenterY();
             if (SEGURAS.contains(n)) {
-                double r = u * 0.32;
+                // Seguro: puntito gris; salida: puntito blanco con borde
+                double r = u * (salida != null ? 0.2 : 0.15);
                 Ellipse2D circ = new Ellipse2D.Double(cx - r, cy - r, 2 * r, 2 * r);
-                if (salida == null) {
-                    g.setColor(GRIS_SEGURO);
-                    g.fill(circ);
-                }
-                g.setColor(Color.DARK_GRAY);
+                g.setColor(salida != null ? Color.WHITE : new Color(0x88, 0x88, 0x88));
+                g.fill(circ);
+                g.setColor(new Color(0x55, 0x55, 0x55));
                 g.draw(circ);
+            }
+            if (!MOSTRAR_NUMEROS) {
+                continue;
             }
             String txt = String.valueOf(n);
             FontMetrics fm = g.getFontMetrics();
-            g.setColor(Color.BLACK);
+            g.setColor(new Color(0x9A, 0x9A, 0x9A));
             boolean ancha = b.getWidth() > b.getHeight();
             double tx = ancha ? b.getX() + u * 0.15 : cx - fm.stringWidth(txt) / 2.0;
             double ty = ancha ? cy + fm.getAscent() / 2.5 : b.getY() + fm.getAscent() + u * 0.05;
@@ -351,16 +377,17 @@ public class PanelTablero extends JPanel {
                 if (p == null) {
                     continue;
                 }
-                Ellipse2D circ = new Ellipse2D.Double(p.getX() - r, p.getY() - r, 2 * r, 2 * r);
+                double rf = posiciones.get(id) < 0 ? u * 0.48 : r;
+                Ellipse2D circ = new Ellipse2D.Double(p.getX() - rf, p.getY() - rf, 2 * rf, 2 * rf);
                 fichasDibujadas.put(id, circ);
 
                 boolean seleccionable = fichasSeleccionables.contains(id);
                 if (seleccionable) {
-                    double rh = r * 1.45;
+                    double rh = rf * 1.45;
                     g.setColor(new Color(0, 0, 0, 90));
                     g.fill(new Ellipse2D.Double(p.getX() - rh, p.getY() - rh, 2 * rh, 2 * rh));
                 }
-                g.setColor(colorAwt(color).darker());
+                g.setColor(colorAwt(color));
                 g.fill(circ);
                 g.setColor(seleccionable ? Color.WHITE : Color.BLACK);
                 g.setStroke(new BasicStroke((float) (seleccionable ? Math.max(2, u * 0.12) : 1.2)));
@@ -369,7 +396,7 @@ public class PanelTablero extends JPanel {
                 String num = id.substring(id.lastIndexOf('F') + 1);
                 g.setFont(getFont().deriveFont(Font.BOLD, (float) (u * 0.45)));
                 FontMetrics fm = g.getFontMetrics();
-                g.setColor(Color.WHITE);
+                g.setColor(colorAwt(color).equals(AMARILLO) ? Color.BLACK : Color.WHITE);
                 g.drawString(num, (float) (p.getX() - fm.stringWidth(num) / 2.0), (float) (p.getY() + fm.getAscent() / 2.8));
             }
         }
@@ -379,13 +406,8 @@ public class PanelTablero extends JPanel {
         if (color == null) {
             return null;
         }
-        if (pos < 0) { // en base: 4 lugares fijos dentro del círculo
-            Point2D c = centroBase(color);
-            int n = numeroFicha(id) - 1;
-            double d = 1.15 * u;
-            double dx = (n % 2 == 0) ? -d : d;
-            double dy = (n < 2) ? -d : d;
-            return new Point2D.Double(c.getX() + dx, c.getY() + dy);
+        if (pos < 0) { // en base: su lugar dentro del cuadro blanco
+            return lugarEnBase(centroBase(color), Math.floorMod(numeroFicha(id) - 1, 4));
         }
         Shape s;
         if (pos <= 68) {
@@ -415,15 +437,6 @@ public class PanelTablero extends JPanel {
             }
         }
         return new Point2D.Double(cx, cy);
-    }
-
-    private String jugadorDeColor(String color) {
-        for (Map.Entry<String, String> e : coloresJugadores.entrySet()) {
-            if (color.equals(e.getValue())) {
-                return e.getKey();
-            }
-        }
-        return null;
     }
 
     private static String dueno(String idFicha) {

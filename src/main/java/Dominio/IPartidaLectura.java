@@ -27,6 +27,12 @@ public interface IPartidaLectura {
     /** Color de cada jugador: idJugador -> nombre del color (ROJO, AZUL, VERDE, AMARILLO). */
     Map<String, String> obtenerColoresJugadores();
 
+    /** Nombre de cada jugador: idJugador -> nombre. */
+    Map<String, String> obtenerNombresJugadores();
+
+    /** Avatar de cada jugador: idJugador -> número de avatar (0..11). */
+    Map<String, Integer> obtenerAvataresJugadores();
+
     String obtenerEstadoJuego();
 
     /** idJugador del ganador, o null si la partida no ha terminado. */

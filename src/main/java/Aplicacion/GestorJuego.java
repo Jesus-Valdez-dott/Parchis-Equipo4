@@ -152,6 +152,8 @@ public class GestorJuego implements INotificadorRed {
                 fachada.obtenerFichasMovibles(),
                 fachada.obtenerPosiciones(),
                 fachada.obtenerColoresJugadores(),
+                fachada.obtenerNombresJugadores(),
+                fachada.obtenerAvataresJugadores(),
                 fachada.obtenerEstadoJuego(),
                 fachada.obtenerGanador());
     }
