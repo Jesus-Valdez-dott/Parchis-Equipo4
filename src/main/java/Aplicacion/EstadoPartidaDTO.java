@@ -27,11 +27,13 @@ public final class EstadoPartidaDTO implements Serializable {
     private final Map<String, Integer> avataresJugadores;
     private final String estadoJuego;
     private final String ganador;
+    private final String solicitanteInicio;
+    private final List<String> jugadoresConfirmados;
 
     public EstadoPartidaDTO(int valorDado, String jugadorActual, List<String> fichasMovibles,
             Map<String, Integer> posiciones, Map<String, String> coloresJugadores,
             Map<String, String> nombresJugadores, Map<String, Integer> avataresJugadores,
-            String estadoJuego, String ganador) {
+            String estadoJuego, String ganador, String solicitanteInicio, List<String> jugadoresConfirmados) {
         this.valorDado = valorDado;
         this.jugadorActual = jugadorActual;
         this.fichasMovibles = Collections.unmodifiableList(new ArrayList<>(fichasMovibles));
@@ -41,6 +43,8 @@ public final class EstadoPartidaDTO implements Serializable {
         this.avataresJugadores = Collections.unmodifiableMap(new LinkedHashMap<>(avataresJugadores));
         this.estadoJuego = estadoJuego;
         this.ganador = ganador;
+        this.solicitanteInicio = solicitanteInicio;
+        this.jugadoresConfirmados = Collections.unmodifiableList(new ArrayList<>(jugadoresConfirmados));
     }
 
     public int getValorDado() { return valorDado; }
@@ -52,4 +56,6 @@ public final class EstadoPartidaDTO implements Serializable {
     public Map<String, Integer> getAvataresJugadores() { return avataresJugadores; }
     public String getEstadoJuego() { return estadoJuego; }
     public String getGanador() { return ganador; }
+    public String getSolicitanteInicio() { return solicitanteInicio; }
+    public List<String> getJugadoresConfirmados() { return jugadoresConfirmados; }
 }

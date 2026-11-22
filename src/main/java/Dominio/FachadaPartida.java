@@ -56,6 +56,16 @@ public class FachadaPartida implements IFachadaPartida {
                 return ResultadoAccion.rechazado("La ficha no puede moverse ahora", version);
             }
             moverYAplicarReglas(idJugador, idFicha); // 5
+        } else if (SOLICITAR_INICIO.equals(tipoAccion)) {
+            String motivo = procesarSolicitudInicio(idJugador);   // CU Iniciar partida (SD-02)
+            if (motivo != null) {
+                return ResultadoAccion.rechazado(motivo, version);
+            }
+        } else if (CONFIRMAR_INICIO.equals(tipoAccion)) {
+            String motivo = procesarConfirmacionInicio(idJugador); // CU Iniciar partida (SD-03)
+            if (motivo != null) {
+                return ResultadoAccion.rechazado(motivo, version);
+            }
         } else {
             return ResultadoAccion.rechazado("Acción desconocida: " + tipoAccion, version);
         }
@@ -68,6 +78,39 @@ public class FachadaPartida implements IFachadaPartida {
     @Override
     public synchronized int obtenerVersion() {
         return version;
+    }
+
+    // ==================================================================
+    // CU INICIAR PARTIDA
+    // ==================================================================
+
+    /** SD-02: valida y registra la solicitud. @return null si se aceptó; si no, el motivo. */
+    private String procesarSolicitudInicio(String idJugador) {
+        String motivo = juego.validarSolicitudInicio(idJugador);
+        if (motivo == null) {
+            juego.solicitarInicio(idJugador);
+        }
+        return motivo;
+    }
+
+    /** SD-03: valida y registra la confirmación (si es la última, la partida inicia). */
+    private String procesarConfirmacionInicio(String idJugador) {
+        String motivo = juego.validarConfirmacionInicio(idJugador);
+        if (motivo == null) {
+            juego.confirmarInicio(idJugador);
+        }
+        return motivo;
+    }
+
+    /**
+     * SD-04: inscribe a un jugador. La firma definitiva la decide el CU Unirse a
+     * partida; lo que importa para Iniciar partida es que pase por Juego.agregarJugador
+     * (reinicio de confirmaciones / inicio automático con 4) y que suba la versión
+     * para que el Host difunda el estado nuevo.
+     */
+    public synchronized void inscribirJugador(Jugador jugador) {
+        juego.agregarJugador(jugador);
+        version++;
     }
 
     // ==================================================================
@@ -195,6 +238,16 @@ public class FachadaPartida implements IFachadaPartida {
     @Override
     public synchronized String obtenerEstadoJuego() {
         return juego.obtenerEstadoJuego();
+    }
+
+    @Override
+    public synchronized String obtenerSolicitanteInicio() {
+        return juego.obtenerSolicitanteInicio();
+    }
+
+    @Override
+    public synchronized List<String> obtenerJugadoresConfirmados() {
+        return juego.obtenerJugadoresConfirmados();
     }
 
     @Override

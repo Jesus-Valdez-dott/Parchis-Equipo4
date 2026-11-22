@@ -19,6 +19,9 @@ import java.util.Map;
  */
 public class Juego {
 
+    public static final int MIN_JUGADORES = 2;
+    public static final int MAX_JUGADORES = 4;
+
     private final String idPartida;
     private EstadoJuego estado;
     private final LinkedList<Jugador> ordenTurnos;
@@ -29,6 +32,7 @@ public class Juego {
     private int indiceJugadorActual;
     private int numeroSalida;   // número del dado para sacar ficha (configurable, por defecto 5)
     private String idGanador;
+    private SolicitudInicio solicitudInicio;   // solo existe mientras se espera el inicio
 
     public Juego(String idPartida) {
         this.idPartida = idPartida;
@@ -76,12 +80,12 @@ public class Juego {
     }
 
     public void avanzarTurno() {
-        if (jugadores.isEmpty()) {
+        if (ordenTurnos.isEmpty()) {
             return;
         }
         turno.cancelarTurno();
         opciones.clear();
-        indiceJugadorActual = (indiceJugadorActual + 1) % jugadores.size();
+        indiceJugadorActual = (indiceJugadorActual + 1) % ordenTurnos.size();
         turno.habilitarLanzamiento();
     }
 
@@ -170,24 +174,125 @@ public class Juego {
     }
 
     // ------------------------------------------------------------------
-    // Preparación de la partida (los usan otros CU: unirse / iniciar partida)
+    // CU Iniciar partida
     // ------------------------------------------------------------------
 
+    /**
+     * Inscribe a un jugador (lo llama el CU Unirse a partida).
+     * Reglas de Iniciar partida: con 4 inscritos la partida inicia sola; si hay
+     * una solicitud de inicio pendiente, sus confirmaciones se reinician porque
+     * el nuevo también tiene que estar de acuerdo.
+     */
     public void agregarJugador(Jugador jugador) {
+        if (estado == EstadoJuego.EN_CURSO || estado == EstadoJuego.FINALIZADO) {
+            throw new IllegalStateException("La partida ya inició");
+        }
+        if (jugadores.size() >= MAX_JUGADORES) {
+            throw new IllegalStateException("La partida ya tiene " + MAX_JUGADORES + " jugadores");
+        }
         jugadores.add(jugador);
-        ordenTurnos.add(jugador);
         tablero.registrarFichas(jugador.obtenerFichas());
         if (estado == EstadoJuego.CONFIGURACION) {
             estado = EstadoJuego.ESPERANDO_JUGADORES;
         }
+        if (jugadores.size() == MAX_JUGADORES) {
+            iniciarPartida();
+        } else if (solicitudInicio != null) {
+            solicitudInicio.reiniciarConfirmaciones();
+        }
     }
 
-    public void iniciar() {
-        if (jugadores.size() >= 2) {
-            estado = EstadoJuego.EN_CURSO;
-            indiceJugadorActual = 0;
-            turno.habilitarLanzamiento();
+    /** @return null si el jugador puede pedir el inicio; si no, el motivo. */
+    public String validarSolicitudInicio(String idJugador) {
+        if (estado != EstadoJuego.ESPERANDO_JUGADORES) {
+            return "La partida ya inició";
         }
+        if (buscarJugador(idJugador) == null) {
+            return "No estás inscrito en la partida";
+        }
+        if (jugadores.size() < MIN_JUGADORES) {
+            return "Se necesitan al menos " + MIN_JUGADORES + " jugadores para iniciar";
+        }
+        if (solicitudInicio != null) {
+            return "Ya hay una solicitud para iniciar la partida";
+        }
+        return null;
+    }
+
+    public void solicitarInicio(String idJugador) {
+        solicitudInicio = new SolicitudInicio(idJugador);
+        iniciarSiTodosConfirmaron();
+    }
+
+    /** @return null si el jugador puede confirmar el inicio; si no, el motivo. */
+    public String validarConfirmacionInicio(String idJugador) {
+        if (estado != EstadoJuego.ESPERANDO_JUGADORES) {
+            return "La partida ya inició";
+        }
+        if (buscarJugador(idJugador) == null) {
+            return "No estás inscrito en la partida";
+        }
+        if (solicitudInicio == null) {
+            return "Nadie ha pedido iniciar la partida";
+        }
+        if (solicitudInicio.haConfirmado(idJugador)) {
+            return "Ya confirmaste el inicio";
+        }
+        return null;
+    }
+
+    public void confirmarInicio(String idJugador) {
+        solicitudInicio.registrarConfirmacion(idJugador);
+        iniciarSiTodosConfirmaron();
+    }
+
+    private void iniciarSiTodosConfirmaron() {
+        if (solicitudInicio != null && solicitudInicio.todosConfirmaron(idsInscritos())) {
+            iniciarPartida();
+        }
+    }
+
+    /** Pasa la partida a EN_CURSO; el primero en tirar es el Host (el primero en entrar). */
+    public void iniciarPartida() {
+        if (estado != EstadoJuego.ESPERANDO_JUGADORES || jugadores.size() < MIN_JUGADORES) {
+            return;
+        }
+        asignarTurnosPorOrdenDeEntrada();
+        estado = EstadoJuego.EN_CURSO;
+        solicitudInicio = null;
+        indiceJugadorActual = 0;
+        turno.habilitarLanzamiento();
+    }
+
+    /** Decisión del equipo: los turnos siguen el orden de inscripción (el Host primero). */
+    private void asignarTurnosPorOrdenDeEntrada() {
+        ordenTurnos.clear();
+        ordenTurnos.addAll(jugadores);
+    }
+
+    public String obtenerSolicitanteInicio() {
+        return solicitudInicio != null ? solicitudInicio.getIdSolicitante() : null;
+    }
+
+    /** Ids de quienes ya confirmaron, en el orden en que se inscribieron. */
+    public List<String> obtenerJugadoresConfirmados() {
+        List<String> confirmados = new ArrayList<>();
+        if (solicitudInicio != null) {
+            for (String id : idsInscritos()) {
+                if (solicitudInicio.haConfirmado(id)) {
+                    confirmados.add(id);
+                }
+            }
+        }
+        return confirmados;
+    }
+
+    private List<String> idsInscritos() {
+        List<String> ids = new ArrayList<>();
+        for (Jugador j : jugadores) {
+            ids.add(j.getIdJugador());
+        }
+        return ids;
     }
 
     public void setNumeroSalida(int numeroSalida) {
@@ -198,9 +303,10 @@ public class Juego {
     // Auxiliares para ReglasMovimiento y la fachada
     // ------------------------------------------------------------------
 
+    /** null mientras la partida no ha iniciado (todavía no hay orden de turnos). */
     public Jugador obtenerJugadorEnTurno() {
-        if (indiceJugadorActual >= 0 && indiceJugadorActual < jugadores.size()) {
-            return jugadores.get(indiceJugadorActual);
+        if (indiceJugadorActual >= 0 && indiceJugadorActual < ordenTurnos.size()) {
+            return ordenTurnos.get(indiceJugadorActual);
         }
         return null;
     }
@@ -225,4 +331,5 @@ public class Juego {
     public List<Jugador> getJugadores() { return jugadores; }
     public int getNumeroSalida() { return numeroSalida; }
     public String getIdGanador() { return idGanador; }
+    public List<Jugador> getOrdenTurnos() { return ordenTurnos; }
 }

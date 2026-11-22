@@ -8,6 +8,8 @@ import Dominio.Jugador;
 import Infraestructura.IGestorRed;
 import Presentacion.ControladorJuego;
 import Presentacion.ModeloPresentacion;
+import Presentacion.NavegadorPantallas;
+import Presentacion.PantallaLobby;
 import Presentacion.PantallaPartida;
 import Presentacion.VentanaParchis;
 import javax.swing.JOptionPane;
@@ -18,8 +20,9 @@ import javax.swing.SwingUtilities;
  * programa; el que arranca como "host" mantiene el estado oficial.
  *
  * Uso:
- *   (sin argumentos)            demo de 4 jugadores en este equipo
+ *   (sin argumentos)            demo de 3 jugadores en este equipo (se ve el Lobby)
  *   demo  [jugadores] [puerto]  igual, eligiendo 2, 3 o 4 jugadores
+ *                               (con 4 la partida inicia sola: CU Iniciar partida)
  *   host  [jugadores] [puerto]  este equipo es el Host y juega como J1
  *   cliente <idJugador> [ipHost] [puerto]   p. ej.: cliente J2 192.168.1.10 5000
  *
@@ -42,7 +45,7 @@ public class Parchis {
             try {
                 switch (modo) {
                     case "host": {
-                        int jugadores = entero(args, 1, 4);
+                        int jugadores = entero(args, 1, 3);
                         int puerto = entero(args, 2, PUERTO_POR_DEFECTO);
                         crearHost(jugadores, puerto).setVisible(true);
                         break;
@@ -55,7 +58,7 @@ public class Parchis {
                         break;
                     }
                     default: {
-                        int jugadores = entero(args, 1, 4);
+                        int jugadores = entero(args, 1, 3);
                         int puerto = entero(args, 2, PUERTO_POR_DEFECTO);
                         demoLocal(jugadores, puerto);
                         break;
@@ -71,12 +74,14 @@ public class Parchis {
 
     /** Peer Host: tiene la partida (Dominio) y abre el puerto para los demás. */
     public static VentanaParchis crearHost(int numJugadores, int puerto) throws Exception {
-        // Dominio (esto lo harán los CU de configurar/unirse/iniciar partida)
+        // Dominio. TODO CU Configurar / Unirse a partida: por ahora los jugadores
+        // se inscriben aquí. La partida NO se inicia aquí: queda en
+        // ESPERANDO_JUGADORES y el CU Iniciar partida decide desde el Lobby
+        // (con 4 inscritos agregarJugador la inicia sola).
         Juego juego = new Juego("PARTIDA_PARCHIS_01");
         for (int i = 1; i <= numJugadores; i++) {
             juego.agregarJugador(new Jugador("J" + i, "Jugador " + i, "avatar" + i, COLORES[i - 1]));
         }
-        juego.iniciar();
         FachadaPartida fachada = new FachadaPartida(juego);
 
         // Infraestructura + Aplicación + Presentación
@@ -102,14 +107,23 @@ public class Parchis {
         return new RedLocalSimulada();
     }
 
-    /** Capa de Presentación (MVC): modelo, controlador y vista observando al modelo. */
+    /**
+     * Capa de Presentación (MVC): un modelo, un controlador y dos vistas
+     * (Lobby y Partida) observando al mismo modelo. Se empieza en el Lobby;
+     * el controlador pide al navegador cambiar a la partida cuando ésta
+     * pasa a EN_CURSO (CU Iniciar partida).
+     */
     private static VentanaParchis armarPresentacion(GestorJuego gestorJuego, String titulo) {
         ModeloPresentacion modelo = new ModeloPresentacion(gestorJuego.getIdJugadorLocal());
         ControladorJuego controlador = new ControladorJuego(modelo, gestorJuego);
-        PantallaPartida vista = new PantallaPartida(controlador, modelo);
-        modelo.agregarObservador(vista);
+        PantallaLobby lobby = new PantallaLobby(controlador, modelo);
+        PantallaPartida partida = new PantallaPartida(controlador, modelo);
+        modelo.agregarObservador(lobby);
+        modelo.agregarObservador(partida);
         VentanaParchis ventana = new VentanaParchis("Parchís - " + titulo);
-        ventana.mostrar(vista);
+        NavegadorPantallas navegador = new NavegadorPantallas(ventana, lobby, partida);
+        controlador.setNavegador(navegador);
+        navegador.mostrarLobby();
         return ventana;
     }
 

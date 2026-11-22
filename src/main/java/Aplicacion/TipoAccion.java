@@ -7,5 +7,7 @@ package Aplicacion;
  */
 public enum TipoAccion {
     LANZAR_DADO,
-    MOVER_FICHA
+    MOVER_FICHA,
+    SOLICITAR_INICIO,
+    CONFIRMAR_INICIO
 }

@@ -60,6 +60,9 @@ public class ModeloPresentacion {
         if (estado == null) {
             return "Esperando el estado de la partida";
         }
+        if (tipoAccion == TipoAccion.SOLICITAR_INICIO || tipoAccion == TipoAccion.CONFIRMAR_INICIO) {
+            return validarAccionDeInicio(tipoAccion);
+        }
         if (!"EN_CURSO".equals(estado.getEstadoJuego())) {
             return "La partida no está en curso";
         }
@@ -71,6 +74,35 @@ public class ModeloPresentacion {
         }
         if (tipoAccion == TipoAccion.MOVER_FICHA && !estado.getFichasMovibles().contains(idFicha)) {
             return "Esa ficha no se puede mover";
+        }
+        return null;
+    }
+
+    /**
+     * CU Iniciar partida: la misma validación que hará el Host, pero con la
+     * copia local. Si dos peers compiten, el Host decide (SD-02).
+     */
+    private String validarAccionDeInicio(TipoAccion tipoAccion) {
+        if (!"ESPERANDO_JUGADORES".equals(estado.getEstadoJuego())) {
+            return "La partida ya inició";
+        }
+        if (!estado.getNombresJugadores().containsKey(miIdJugador)) {
+            return "No estás inscrito en la partida";
+        }
+        if (tipoAccion == TipoAccion.SOLICITAR_INICIO) {
+            if (estado.getNombresJugadores().size() < 2) {
+                return "Se necesitan al menos 2 jugadores para iniciar";
+            }
+            if (estado.getSolicitanteInicio() != null) {
+                return "Ya hay una solicitud para iniciar la partida";
+            }
+        } else {
+            if (estado.getSolicitanteInicio() == null) {
+                return "Nadie ha pedido iniciar la partida";
+            }
+            if (estado.getJugadoresConfirmados().contains(miIdJugador)) {
+                return "Ya confirmaste el inicio";
+            }
         }
         return null;
     }
@@ -101,12 +133,18 @@ public class ModeloPresentacion {
     public synchronized DatosVista obtenerDatosVista() {
         if (estado == null) {
             return new DatosVista(miIdJugador, false, 0, null, null, null, null,
-                    null, null, null, null, aviso, version);
+                    null, null, null, null, null, null, aviso, version);
         }
         return new DatosVista(miIdJugador, true, estado.getValorDado(), estado.getJugadorActual(),
                 estado.getFichasMovibles(), estado.getPosiciones(), estado.getColoresJugadores(),
                 estado.getNombresJugadores(), estado.getAvataresJugadores(),
-                estado.getEstadoJuego(), estado.getGanador(), aviso, version);
+                estado.getEstadoJuego(), estado.getGanador(),
+                estado.getSolicitanteInicio(), estado.getJugadoresConfirmados(), aviso, version);
+    }
+
+    /** Estado del juego de la última instantánea (null si aún no llega). */
+    public synchronized String getEstadoJuego() {
+        return estado == null ? null : estado.getEstadoJuego();
     }
 
     public String getMiIdJugador() {

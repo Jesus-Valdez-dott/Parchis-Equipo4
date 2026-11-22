@@ -26,6 +26,8 @@ public final class DatosVista {
     private final Map<String, Integer> avataresJugadores;
     private final String estadoJuego;
     private final String ganador;
+    private final String solicitanteInicio;          // CU Iniciar partida
+    private final List<String> jugadoresConfirmados; // CU Iniciar partida
     private final String aviso;
     private final int version;
 
@@ -33,6 +35,7 @@ public final class DatosVista {
             List<String> fichasMovibles, Map<String, Integer> posiciones,
             Map<String, String> coloresJugadores, Map<String, String> nombresJugadores,
             Map<String, Integer> avataresJugadores, String estadoJuego, String ganador,
+            String solicitanteInicio, List<String> jugadoresConfirmados,
             String aviso, int version) {
         this.miIdJugador = miIdJugador;
         this.hayEstado = hayEstado;
@@ -45,8 +48,59 @@ public final class DatosVista {
         this.avataresJugadores = avataresJugadores != null ? avataresJugadores : new HashMap<>();
         this.estadoJuego = estadoJuego;
         this.ganador = ganador;
+        this.solicitanteInicio = solicitanteInicio;
+        this.jugadoresConfirmados = jugadoresConfirmados != null
+                ? jugadoresConfirmados : Collections.emptyList();
         this.aviso = aviso;
         this.version = version;
+    }
+
+    // ==================================================================
+    // CU INICIAR PARTIDA - preguntas que hace el Lobby
+    // ==================================================================
+
+    /** Ids de los inscritos en orden de entrada (Host primero). */
+    public List<String> getJugadoresInscritos() {
+        return new ArrayList<>(nombresJugadores.keySet());
+    }
+
+    public boolean isEsperandoJugadores() {
+        return "ESPERANDO_JUGADORES".equals(estadoJuego);
+    }
+
+    public boolean haySolicitudInicio() {
+        return solicitanteInicio != null;
+    }
+
+    /** INICIAR PARTIDA se habilita si hay 2+ inscritos y nadie lo ha pedido aún. */
+    public boolean isPuedeSolicitarInicio() {
+        return isEsperandoJugadores()
+                && nombresJugadores.containsKey(miIdJugador)
+                && nombresJugadores.size() >= 2
+                && solicitanteInicio == null;
+    }
+
+    /** Hay una solicitud de otro jugador y yo todavía no la confirmo. */
+    public boolean isDebeConfirmarInicio() {
+        return isEsperandoJugadores()
+                && solicitanteInicio != null
+                && nombresJugadores.containsKey(miIdJugador)
+                && !haConfirmado(miIdJugador);
+    }
+
+    public boolean haConfirmado(String idJugador) {
+        return jugadoresConfirmados.contains(idJugador);
+    }
+
+    /** Inscritos que todavía no confirman (en orden de entrada). */
+    public List<String> getPendientesDeConfirmar() {
+        List<String> pendientes = new ArrayList<>();
+        for (String id : nombresJugadores.keySet()) {
+            if (!haConfirmado(id)) {
+                pendientes.add(id);
+            }
+        }
+        return pendientes;
     }
 
     public boolean isEnCurso() {
@@ -78,6 +132,8 @@ public final class DatosVista {
     public Map<String, Integer> getAvataresJugadores() { return avataresJugadores; }
     public String getEstadoJuego() { return estadoJuego; }
     public String getGanador() { return ganador; }
+    public String getSolicitanteInicio() { return solicitanteInicio; }
+    public List<String> getJugadoresConfirmados() { return jugadoresConfirmados; }
     public String getAviso() { return aviso; }
     public int getVersion() { return version; }
 }

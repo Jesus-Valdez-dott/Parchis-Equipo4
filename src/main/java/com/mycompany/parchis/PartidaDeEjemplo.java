@@ -53,7 +53,7 @@ final class PartidaDeEjemplo {
         posiciones.put("J2_F3", 27);
 
         modelo.reemplazarEstado(new EstadoPartidaDTO(1, "J3", List.of(), posiciones, colores,
-                nombres, avatares, "EN_CURSO", null), 1);
+                nombres, avatares, "EN_CURSO", null, null, List.of()), 1);
         return pantalla;
     }
 }

@@ -35,6 +35,12 @@ public interface IPartidaLectura {
 
     String obtenerEstadoJuego();
 
+    /** idJugador de quien pidió iniciar la partida, o null si nadie lo ha pedido. */
+    String obtenerSolicitanteInicio();
+
+    /** Ids de quienes ya confirmaron el inicio (incluye al solicitante). */
+    List<String> obtenerJugadoresConfirmados();
+
     /** idJugador del ganador, o null si la partida no ha terminado. */
     String obtenerGanador();
 }

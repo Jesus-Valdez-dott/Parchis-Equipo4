@@ -36,6 +36,8 @@ public class Notificacion extends Tarjeta {
         aceptar.setText(textoAceptar);
         rechazar.setText(textoRechazar != null ? textoRechazar : "");
         rechazar.setVisible(textoRechazar != null);
+        // con un solo botón (p. ej. "Confirmar" del CU Iniciar partida) se centra
+        mover(aceptar, 128, textoRechazar != null ? 11 : 28, 90, 31);
         setVisible(true);
     }
 

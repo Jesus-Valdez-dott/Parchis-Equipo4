@@ -155,7 +155,9 @@ public class GestorJuego implements INotificadorRed {
                 fachada.obtenerNombresJugadores(),
                 fachada.obtenerAvataresJugadores(),
                 fachada.obtenerEstadoJuego(),
-                fachada.obtenerGanador());
+                fachada.obtenerGanador(),
+                fachada.obtenerSolicitanteInicio(),
+                fachada.obtenerJugadoresConfirmados());
     }
 
     private void recortarHistorial() {
