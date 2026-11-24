@@ -49,7 +49,7 @@ class Casilla {
         return fichasOcupantes.size() >= CAPACIDAD;
     }
 
-    /** Regla 7: dos fichas del MISMO color en la casilla forman barrera. */
+    /** Dos fichas del mismo color en una casilla forman una barrera. */
     public boolean esBarrera() {
         return fichasOcupantes.size() >= 2
                 && fichasOcupantes.get(0).getColor() == fichasOcupantes.get(1).getColor();

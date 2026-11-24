@@ -7,11 +7,12 @@ import Presentacion.estilo.Estilo;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JOptionPane;
 import javax.swing.JButton;
 
 /**
- * Pantalla para unirse a una partida creada (storyboard: "Pantalla para unirse a una partida creada").
- * SIN lógica: muestra las tarjetas que le agreguen y expone los botones.
+ * Pantalla para ingresar los datos de conexión al Host y mostrar el resultado
+ * de la solicitud de unión.
  *
  * @author Equipo 4
  */
@@ -23,10 +24,14 @@ public class PantallaUnirsePartida extends PanelDiseno {
     public static final int MAX_TARJETAS = 3;
 
     private final Boton atras = new Boton("Atras", Estilo.ROJO_PURO, new Color(0x30, 0x00, 0x00), 4, 10, false);
+    private final Boton conectarPorIp = new Boton("Conectar por IP", Estilo.VERDE, Color.BLACK, 4, 10, false);
     private final List<TarjetaPartida> tarjetas = new ArrayList<>();
+    private ControlUnirsePartida controlUnirsePartida;
+    private Runnable accionSolicitarConexion;
 
     public PantallaUnirsePartida() {
         agregar(new TituloDorado("Unirse a\npartida", 64), 430, 0, 380, 145);
+        agregar(conectarPorIp, 900, 606, 176, 42);
         agregar(atras, 1092, 606, 84, 42);
     }
 
@@ -59,4 +64,46 @@ public class PantallaUnirsePartida extends PanelDiseno {
 
     public List<TarjetaPartida> getTarjetas() { return tarjetas; }
     public JButton getBotonAtras() { return atras; }
+    public JButton getBotonConectarPorIp() { return conectarPorIp; }
+
+    public void setControlUnirsePartida(ControlUnirsePartida controlUnirsePartida) {
+        this.controlUnirsePartida = controlUnirsePartida;
+    }
+
+    public void setAccionSolicitarConexion(Runnable accionSolicitarConexion) {
+        this.accionSolicitarConexion = accionSolicitarConexion;
+    }
+
+    public void solicitarDatosConexion() {
+        if (accionSolicitarConexion != null) {
+            accionSolicitarConexion.run();
+        }
+    }
+
+    public void unirsePartida(String ip, int puerto) throws java.io.IOException {
+        if (controlUnirsePartida == null) {
+            throw new IllegalStateException("No se configuró el controlador de unión");
+        }
+        controlUnirsePartida.unirsePartida(ip, puerto);
+    }
+
+    public void mostrarResultado(String resultado) {
+        Runnable mostrar = () -> JOptionPane.showMessageDialog(
+                this, resultado, "Unirse a partida", JOptionPane.INFORMATION_MESSAGE);
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            mostrar.run();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(mostrar);
+        }
+    }
+
+    public void mostrarError(String mensaje) {
+        Runnable mostrar = () -> JOptionPane.showMessageDialog(
+                this, mensaje, "No se pudo unir", JOptionPane.ERROR_MESSAGE);
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            mostrar.run();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(mostrar);
+        }
+    }
 }

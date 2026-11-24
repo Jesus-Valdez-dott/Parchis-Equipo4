@@ -3,8 +3,8 @@ package Infraestructura;
 import java.io.Serializable;
 
 /**
- * Actualización que el Host difunde a todos los peers (diagrama 4, pasos 8-9 y 17)
- * con el estado completo de la partida y su versión.
+ * Actualización que el Host difunde a todos los peers con el estado completo
+ * de la partida y su versión.
  *
  * El estado viaja como Serializable para que Infraestructura no dependa de las
  * clases de capas superiores; la capa de Aplicación sabe qué hay adentro.

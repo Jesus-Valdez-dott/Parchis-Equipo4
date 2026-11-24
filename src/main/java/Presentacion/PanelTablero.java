@@ -26,9 +26,8 @@ import java.util.function.Consumer;
 import javax.swing.JPanel;
 
 /**
- * Dibuja el tablero: numeración, salidas y colores de la Fig. 1 del documento
- * del juego, con el estilo del storyboard (marco crema y esquinas cuadradas
- * con un cuadro blanco donde esperan las fichas).
+ * Dibuja las 68 casillas del perímetro, las cuatro salidas y los pasillos de
+ * llegada, junto con las fichas y sus colores.
  *
  * Geometría: el tablero mide 21 unidades (u). Cada brazo de la cruz mide 7u de
  * ancho (3 columnas) y 8 filas de 1u (la fila más interna es un trapecio). El
@@ -42,13 +41,12 @@ public class PanelTablero extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
-    // Colores del tablero (Fig. 1)
-    // Tonos del storyboard
+    // Colores de los cuatro brazos del tablero.
     static final Color ROJO = new Color(0xD3, 0x2F, 0x2F);
     static final Color AZUL = new Color(0x2C, 0x6E, 0xC6);
     static final Color VERDE = new Color(0x23, 0x92, 0x4B);
     static final Color AMARILLO = new Color(0xF2, 0xC7, 0x26);
-    /** El storyboard no muestra números en las casillas; ponerlo en true ayuda a depurar. */
+    /** Se ocultan durante el juego; activarlos ayuda a depurar posiciones. */
     private static final boolean MOSTRAR_NUMEROS = false;
     private static final Color CREMA = new Color(0xF5, 0xE9, 0xD0);
 
@@ -261,7 +259,7 @@ public class PanelTablero extends JPanel {
         g.dispose();
     }
 
-    /** Esquinas del storyboard: cuadro de color con un cuadro blanco y 4 lugares para las fichas. */
+    /** Cada esquina muestra el color del jugador y los cuatro lugares de sus fichas. */
     private void dibujarBases(Graphics2D g) {
         for (String color : COLOR_BRAZO) {
             Point2D c = centroBase(color);

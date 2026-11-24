@@ -1,7 +1,7 @@
 package Dominio;
 
 /**
- * Resultado de FachadaPartida.procesarAccion (diagrama 4):
+ * Resultado de FachadaPartida.procesarAccion:
  * aceptado(resultado, versión) o rechazado(motivo).
  *
  * @author Jesús

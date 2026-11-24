@@ -1,7 +1,7 @@
 package Dominio;
 
 /**
- * Estados de la partida (el diagrama declara Juego.estado : EstadoJuego).
+ * Estados posibles de la partida.
  *
  * @author Jesús
  */

@@ -12,8 +12,8 @@ import java.util.Map;
  * Entidad raíz de la partida.
  *
  * "opciones" son las fichas que el jugador en turno puede mover con la acción
- * actual; las calcula ReglasMovimiento y se guardan con guardarOpciones()
- * (diagrama 10). obtenerFichasMovibles() las devuelve (diagrama 13).
+ * actual; las calcula ReglasMovimiento y se guardan con guardarOpciones().
+ * obtenerFichasMovibles() las devuelve.
  *
  * @author Jesús
  */
@@ -29,9 +29,18 @@ public class Juego {
     private int indiceJugadorActual;
     private int numeroSalida;   // número del dado para sacar ficha (configurable, por defecto 5)
     private String idGanador;
+    private final int capacidadJugadores;
 
     public Juego(String idPartida) {
+        this(idPartida, 4);
+    }
+
+    public Juego(String idPartida, int capacidadJugadores) {
+        if (capacidadJugadores < 2 || capacidadJugadores > 4) {
+            throw new IllegalArgumentException("La partida debe admitir de 2 a 4 jugadores");
+        }
         this.idPartida = idPartida;
+        this.capacidadJugadores = capacidadJugadores;
         this.estado = EstadoJuego.CONFIGURACION;
         this.ordenTurnos = new LinkedList<>();
         this.jugadores = new ArrayList<>();
@@ -43,7 +52,7 @@ public class Juego {
     }
 
     // ------------------------------------------------------------------
-    // Validaciones (diagramas 02 y 05)
+    // Validaciones
     // ------------------------------------------------------------------
 
     public boolean puedeLanzar(String idJugador) {
@@ -86,7 +95,7 @@ public class Juego {
     }
 
     // ------------------------------------------------------------------
-    // Consultas (diagrama 13)
+    // Consultas
     // ------------------------------------------------------------------
 
     public int obtenerValorDado() {
@@ -173,17 +182,28 @@ public class Juego {
     // Preparación de la partida (los usan otros CU: unirse / iniciar partida)
     // ------------------------------------------------------------------
 
-    public void agregarJugador(Jugador jugador) {
+    public boolean agregarJugador(Jugador jugador) {
+        if (jugador == null || jugadores.size() >= capacidadJugadores
+                || (estado != EstadoJuego.CONFIGURACION && estado != EstadoJuego.ESPERANDO_JUGADORES)
+                || buscarJugador(jugador.getIdJugador()) != null) {
+            return false;
+        }
+        for (Jugador existente : jugadores) {
+            if (existente.getColor() == jugador.getColor()) {
+                return false;
+            }
+        }
         jugadores.add(jugador);
         ordenTurnos.add(jugador);
         tablero.registrarFichas(jugador.obtenerFichas());
         if (estado == EstadoJuego.CONFIGURACION) {
             estado = EstadoJuego.ESPERANDO_JUGADORES;
         }
+        return true;
     }
 
     public void iniciar() {
-        if (jugadores.size() >= 2) {
+        if (jugadores.size() >= 2 && estado == EstadoJuego.ESPERANDO_JUGADORES) {
             estado = EstadoJuego.EN_CURSO;
             indiceJugadorActual = 0;
             turno.habilitarLanzamiento();
@@ -225,4 +245,5 @@ public class Juego {
     public List<Jugador> getJugadores() { return jugadores; }
     public int getNumeroSalida() { return numeroSalida; }
     public String getIdGanador() { return idGanador; }
+    public int getCapacidadJugadores() { return capacidadJugadores; }
 }

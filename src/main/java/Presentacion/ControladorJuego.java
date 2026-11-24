@@ -8,9 +8,9 @@ import Aplicacion.TipoAccion;
 /**
  * «controller» del MVC (capa de Presentación).
  * - Hacia abajo: recibe lo que hace el jugador en la vista, lo valida con el
- *   ModeloPresentacion y se lo pide al GestorJuego (diagrama 3).
+ *   ModeloPresentacion y se lo pide al GestorJuego.
  * - Hacia arriba: el GestorJuego le entrega estados nuevos y rechazos y él
- *   actualiza el ModeloPresentacion (diagrama 4). Nunca toca la vista.
+ *   actualiza el ModeloPresentacion. Nunca toca la vista.
  *
  * @author Jesús
  */
@@ -26,30 +26,31 @@ public class ControladorJuego implements IPresentacionJuego {
     }
 
     // ==================================================================
-    // DIAGRAMA 3 - Petición
+    // Solicitudes de acción
     // ==================================================================
 
-    /** Paso 2. idFicha es null al lanzar el dado. */
+    /** idFicha es null al lanzar el dado. */
     public void solicitarAccion(TipoAccion tipoAccion, String idFicha) {
-        String motivo = modelo.validarAccion(tipoAccion, idFicha);   // 3 -> 4
+        // El chequeo local da respuesta inmediata; el Host vuelve a validar antes de cambiar el estado.
+        String motivo = modelo.validarAccion(tipoAccion, idFicha);
         if (motivo != null) {
             modelo.registrarAviso(motivo);
             return;
         }
-        gestorJuego.solicitarAccion(tipoAccion, idFicha);            // 5
+        gestorJuego.solicitarAccion(tipoAccion, idFicha);
     }
 
     // ==================================================================
-    // DIAGRAMA 4 - Respuestas del Host
+    // Actualizaciones recibidas del Host
     // ==================================================================
 
-    /** Pasos 11 -> 12. */
+    /** Actualiza el modelo con el estado recibido. */
     @Override
     public void actualizarEstado(EstadoPartidaDTO instantanea, int version) {
         modelo.reemplazarEstado(instantanea, version);
     }
 
-    /** Pasos 29 -> 30. */
+    /** Registra en el modelo el rechazo recibido. */
     @Override
     public void notificarRechazo(String motivo) {
         modelo.registrarAviso(motivo);

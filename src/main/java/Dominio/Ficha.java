@@ -3,9 +3,9 @@ package Dominio;
 /**
  * Ficha de un jugador.
  *
- * Recorrido (Fig. 1 del documento del juego): la ficha sale en su casilla de
- * salida, avanza 63 casillas por el perímetro hasta su casilla de entrada
- * (68, 17, 34 o 51), entra a su pasillo de 7 casillas y llega a la meta.
+ * La ficha sale en su casilla de salida, avanza 63 casillas por el perímetro
+ * hasta su casilla de entrada (68, 17, 34 o 51), entra al pasillo de 7 casillas
+ * de su color y llega a la meta.
  *
  * distanciaRecorrida: 0 = en su salida ... 63 = en su casilla de entrada,
  *                     64..70 = pasillo, 71 = meta.

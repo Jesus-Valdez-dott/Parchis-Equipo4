@@ -1,7 +1,7 @@
 package Infraestructura;
 
 /**
- * Petición de un jugador al Host (diagrama 3, pasos 6-8).
+ * Petición de un jugador al Host.
  * Lleva identidad (idSolicitud, para deduplicar) y la versión del estado que
  * tenía el jugador cuando la pidió.
  *

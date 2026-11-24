@@ -8,12 +8,13 @@ package Infraestructura;
  */
 public interface INotificadorRed {
 
-    /** En el Host: llegó la solicitud de un peer (diagrama 4, paso 1). */
-    void solicitudRecibida(Solicitud solicitud);
+    /** Recibe un mensaje deserializado desde el peer remoto. */
+    void mensajeRecibido(MensajeRed mensaje);
 
-    /** En cada peer: llegó una actualización del Host (diagrama 4, pasos 10 y 18). */
-    void confirmacionRecibida(ConfirmacionAccion confirmacion);
+    /** Informa la aceptación de una nueva conexión TCP. */
+    void conexionActualizada();
 
-    /** En el peer solicitante: el Host rechazó su acción (diagrama 4, paso 28). */
-    void rechazoRecibido(RechazoAccion rechazo);
+    /** Notifica una desconexión que ocurrió después de conectar al Host. */
+    default void conexionPerdida(String motivo) {
+    }
 }

@@ -1,8 +1,8 @@
 package Aplicacion;
 
 /**
- * Lo que la capa de Aplicación necesita de la capa de Presentación
- * (diagrama 4, pasos 11/19 y 29). La implementa ControladorJuego.
+ * Lo que la capa de Aplicación necesita de la capa de Presentación.
+ * La implementa ControladorJuego.
  *
  * Se define AQUÍ (en Aplicación) para que las dependencias entre capas sigan
  * yendo solo hacia abajo: Presentación -> Aplicación.

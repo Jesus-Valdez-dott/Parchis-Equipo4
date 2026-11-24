@@ -2,6 +2,7 @@ package com.mycompany.parchis;
 
 import Aplicacion.EstadoPartidaDTO;
 import Aplicacion.GestorJuego;
+import Infraestructura.GestorRed;
 import Presentacion.ControladorJuego;
 import Presentacion.ModeloPresentacion;
 import Presentacion.PantallaPartida;
@@ -10,8 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * HERRAMIENTA DE DESARROLLO: arma una PantallaPartida con un estado de ejemplo
- * (los jugadores del storyboard) sin red ni partida real. La usa VistaPreviaPantallas.
+ * Herramienta de vista previa que arma una pantalla con estado estático.
+ * No conecta a la red ni representa una partida jugable.
  *
  * @author Equipo 4
  */
@@ -21,7 +22,7 @@ final class PartidaDeEjemplo {
     }
 
     static PantallaPartida crear() {
-        GestorJuego gestor = new GestorJuego("J3", new RedLocalSimulada(), null);
+        GestorJuego gestor = new GestorJuego("J3", new GestorRed(), null);
         ModeloPresentacion modelo = new ModeloPresentacion("J3");
         ControladorJuego controlador = new ControladorJuego(modelo, gestor);
         PantallaPartida pantalla = new PantallaPartida(controlador, modelo);
