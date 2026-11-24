@@ -2,7 +2,7 @@ package Presentacion;
 
 /**
  * Observer del MVC: la vista se registra en el ModeloPresentacion y este le
- * avisa cuando cambia (diagrama 4, pasos 13/21 y 31).
+ * avisa cuando cambia.
  *
  * @author Jesús
  */

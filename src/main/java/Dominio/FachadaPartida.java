@@ -5,12 +5,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * «facade» de la capa de Dominio. En el Host mantiene el estado OFICIAL de la
- * partida: valida las acciones que llegan de los jugadores y aplica las reglas.
- *
- * Diagrama 4 (Validación y difusión): procesarAccion -> validar turno, versión y
- * acción -> lanzar y registrar / mover y aplicar reglas -> versión + 1.
- * Por dentro sigue los diagramas del CU Ejecutar turno (02, 03, 05, 06, 08-12).
+ * «facade» de la capa de Dominio. En el Host mantiene el estado oficial,
+ * valida las acciones que llegan de los jugadores y aplica las reglas.
  *
  * @author Jesús
  */
@@ -34,35 +30,35 @@ public class FachadaPartida implements IFachadaPartida {
     }
 
     // ==================================================================
-    // DIAGRAMA 4 - procesarAccion
+    // Procesamiento de acciones
     // ==================================================================
 
     @Override
     public synchronized ResultadoAccion procesarAccion(String idJugador, String tipoAccion,
             String idFicha, int versionSolicitud) {
 
-        // 4: validar turno, versión y acción
+        // Validar y aplicar bajo el mismo bloqueo evita mezclar acciones concurrentes.
         if (versionSolicitud != version) {
+            // El cliente debe actualizar su estado antes de intentar otra acción.
             return ResultadoAccion.rechazado("Tu tablero no estaba actualizado; intenta de nuevo", version);
         }
         if (LANZAR_DADO.equals(tipoAccion)) {
             if (!juego.puedeLanzar(idJugador)) {
                 return ResultadoAccion.rechazado("No se permite lanzar ahora", version);
             }
-            lanzarYRegistrar(); // 5
+            lanzarYRegistrar();
         } else if (MOVER_FICHA.equals(tipoAccion)) {
             if (!juego.puedeMover(idJugador, idFicha)
                     || !reglasMovimiento.esMovimientoValido(juego, idFicha)) {
                 return ResultadoAccion.rechazado("La ficha no puede moverse ahora", version);
             }
-            moverYAplicarReglas(idJugador, idFicha); // 5
+            moverYAplicarReglas(idJugador, idFicha);
         } else {
             return ResultadoAccion.rechazado("Acción desconocida: " + tipoAccion, version);
         }
 
-        // 6: confirmar estado; versión = versión + 1
         version++;
-        return ResultadoAccion.aceptado(version); // 7
+        return ResultadoAccion.aceptado(version);
     }
 
     @Override
@@ -70,17 +66,73 @@ public class FachadaPartida implements IFachadaPartida {
         return version;
     }
 
+    @Override
+    public synchronized boolean registrarJugador(Jugador jugador) {
+        if (!juego.agregarJugador(jugador)) {
+            return false;
+        }
+        version++;
+        return true;
+    }
+
+    @Override
+    public synchronized boolean verificarDisponibilidad(String idPartida) {
+        return juego.getIdPartida().equals(idPartida)
+                && "ESPERANDO_JUGADORES".equals(juego.obtenerEstadoJuego())
+                && juego.getJugadores().size() < juego.getCapacidadJugadores();
+    }
+
+    @Override
+    public synchronized boolean registrarJugador(String idJugador) {
+        if (idJugador == null || idJugador.isBlank() || !verificarDisponibilidad(juego.getIdPartida())) {
+            return false;
+        }
+        java.util.Set<ColorJugador> ocupados = java.util.EnumSet.noneOf(ColorJugador.class);
+        for (Jugador jugador : juego.getJugadores()) {
+            ocupados.add(jugador.getColor());
+        }
+        // Asigna al jugador el primer color disponible en el orden configurado.
+        for (ColorJugador color : ColorJugador.values()) {
+            if (!ocupados.contains(color)) {
+                return registrarJugador(new Jugador(idJugador, idJugador, "avatar1", color));
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public synchronized boolean iniciarPartida() {
+        if (!"ESPERANDO_JUGADORES".equals(juego.obtenerEstadoJuego())
+                || juego.getJugadores().size() < 2) {
+            return false;
+        }
+        juego.iniciar();
+        version++;
+        return true;
+    }
+
+    @Override
+    public synchronized int obtenerCantidadJugadores() {
+        return juego.getJugadores().size();
+    }
+
+    @Override
+    public synchronized int obtenerCapacidadJugadores() {
+        return juego.getCapacidadJugadores();
+    }
+
     // ==================================================================
-    // CU EJECUTAR TURNO (lógica de reglas)
+    // Ejecución de turnos
     // ==================================================================
 
-    /** Diagramas 02 (lanzar) y 03 (regla del seis). */
+    /** Lanza el dado y registra el resultado del turno. */
     private void lanzarYRegistrar() {
         Turno turno = juego.getTurno();
         int valor = dado.lanzar();
         turno.registrarTirada(valor);
 
         if (turno.esTercerSeis()) {
+            // El tercer seis cancela el turno y devuelve la última ficha movida.
             String idUltimaFicha = turno.obtenerUltimaFicha();
             if (idUltimaFicha != null) {
                 juego.getTablero().regresarUltimaFicha(idUltimaFicha);
@@ -88,11 +140,11 @@ public class FachadaPartida implements IFachadaPartida {
             turno.cancelarTurno();
             juego.avanzarTurno();
         } else {
-            resolverContinuacion(); // 12
+            resolverContinuacion();
         }
     }
 
-    /** Diagrama 06 (aplicar movimiento) con 07, 08 y 09. */
+    /** Mueve una ficha y aplica las reglas correspondientes. */
     private void moverYAplicarReglas(String idJugador, String idFicha) {
         Turno turno = juego.getTurno();
         Tablero tablero = juego.getTablero();
@@ -102,7 +154,7 @@ public class FachadaPartida implements IFachadaPartida {
         boolean llegaMeta = reglasMovimiento.esLlegadaExacta(juego, idFicha, destino);
         turno.consumirAccion();
 
-        // 08 - Capturar ficha
+        // Captura una ficha rival si corresponde.
         String idVictima = reglasMovimiento.obtenerFichaCapturable(juego, idFicha, destino);
         if (idVictima != null) {
             tablero.capturarFicha(idVictima);
@@ -110,9 +162,9 @@ public class FachadaPartida implements IFachadaPartida {
         }
 
         if (saleDeBase) {
-            tablero.sacarFicha(idFicha);              // 07
+            tablero.sacarFicha(idFicha);
         } else if (llegaMeta) {
-            tablero.llevarAMeta(idFicha);             // 09
+            tablero.llevarAMeta(idFicha);
             turno.agregarBonoMeta(idFicha);
         } else {
             tablero.moverFicha(idFicha, destino);     // incluye rebote
@@ -122,19 +174,20 @@ public class FachadaPartida implements IFachadaPartida {
         if (juego.comprobarVictoria(idJugador)) {
             juego.finalizar(idJugador);
         } else {
-            resolverContinuacion(); // 12
+            resolverContinuacion();
         }
     }
 
-    /** Diagrama 12 - Resolver continuación (con 10 y 11 dentro del loop). */
+    /** Resuelve las acciones restantes del turno. */
     private void resolverContinuacion() {
         Turno turno = juego.getTurno();
 
+        // Consume acciones sin movimientos legales hasta encontrar una acción jugable.
         while (turno.hayAccionPendiente() && !Turno.ESPERANDO_MOVIMIENTO.equals(turno.getFase())) {
-            List<String> opciones = reglasMovimiento.obtenerFichasMovibles(juego); // 10
+            List<String> opciones = reglasMovimiento.obtenerFichasMovibles(juego);
             juego.guardarOpciones(opciones);
             if (opciones.isEmpty()) {
-                turno.consumirAccion();   // 11 - Sin movimientos: se pierde la acción
+                turno.consumirAccion(); // Se pierde esta acción si ninguna ficha puede usarla.
             } else {
                 turno.esperarMovimiento();
             }

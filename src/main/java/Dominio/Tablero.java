@@ -8,16 +8,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Tablero de la Fig. 1: 68 casillas numeradas del 1 al 68 + un pasillo de 7
- * casillas por color que lleva a la meta (triángulo central).
- * Compone a las fichas (asociación de composición del diagrama), por eso sus
- * operaciones reciben el idFicha, igual que en el diagrama de clases de diseño.
+ * Tablero con 68 casillas numeradas y un pasillo de 7 casillas por color
+ * que lleva a la meta.
+ * Compone a las fichas, por eso sus operaciones reciben el idFicha.
  *
  * @author Jesús
  */
 public class Tablero {
 
-    /** Casillas seguras de la Fig. 1 (las del círculo, incluye las 4 salidas). */
+    /** Casillas seguras del perímetro, incluidas las cuatro salidas. */
     public static final Set<Integer> SEGURAS_POR_DEFECTO =
             Set.of(5, 12, 17, 22, 29, 34, 39, 46, 51, 56, 63, 68);
 
@@ -83,11 +82,12 @@ public class Tablero {
     }
 
     // ------------------------------------------------------------------
-    // Operaciones del diagrama
+    // Operaciones del tablero
     // ------------------------------------------------------------------
 
     /**
-     * Regla 7: la ficha no puede pasar por una barrera ni caer en una casilla llena.
+     * Rechaza recorridos que cruzan una barrera, terminan en una casilla llena
+     * o rebotan fuera del pasillo final.
      */
     public boolean validarMovimiento(String idFicha, int pasos) {
         Ficha ficha = fichas.get(idFicha);
@@ -150,7 +150,7 @@ public class Tablero {
         ficha.llegarAMeta();
     }
 
-    /** Regla 4: penalización por tres 6. Las fichas ya en meta no se regresan. */
+    /** Devuelve la ficha a la base, salvo que ya haya llegado a la meta. */
     public void regresarUltimaFicha(String idFicha) {
         Ficha ficha = fichas.get(idFicha);
         if (ficha == null || "EN_META".equals(ficha.getEstado())) {
@@ -183,7 +183,7 @@ public class Tablero {
     // Auxiliares
     // ------------------------------------------------------------------
 
-    /** Regla 8: si se pasa de la meta, rebota las casillas sobrantes (ej. le falta 1 y saca 3: 1 adelante, 2 atrás). */
+    /** Calcula la distancia final; los pasos que exceden la meta se recorren hacia atrás. */
     static int calcularDistanciaDestino(int distanciaActual, int pasos) {
         int nueva = distanciaActual + pasos;
         if (nueva > Ficha.DISTANCIA_TOTAL_META) {

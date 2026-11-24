@@ -49,7 +49,7 @@ public class ModeloPresentacion {
     }
 
     // ==================================================================
-    // DIAGRAMA 3 - validarAccion (pasos 3-4)
+    // Validación local de acciones
     // ==================================================================
 
     /**
@@ -57,6 +57,7 @@ public class ModeloPresentacion {
      * @return null si la acción se puede pedir; si no, el motivo.
      */
     public synchronized String validarAccion(TipoAccion tipoAccion, String idFicha) {
+        // Estas comprobaciones evitan peticiones inválidas, pero no sustituyen la validación del Host.
         if (estado == null) {
             return "Esperando el estado de la partida";
         }
@@ -76,20 +77,21 @@ public class ModeloPresentacion {
     }
 
     // ==================================================================
-    // DIAGRAMA 4 - pasos 12-15 y 30-31
+    // Actualización del estado y avisos
     // ==================================================================
 
-    /** Paso 12: reemplaza la representación local y avisa a la vista (13). */
+    /** Reemplaza la representación local y avisa a la vista. */
     public void reemplazarEstado(EstadoPartidaDTO instantanea, int version) {
         synchronized (this) {
             this.estado = instantanea;
             this.version = version;
             this.aviso = null;
         }
+        // Notifica fuera del bloqueo para que la vista no se ejecute dentro de la sección crítica.
         notificarCambio();
     }
 
-    /** Paso 30: guarda el aviso, conserva el estado y avisa a la vista (31). */
+    /** Guarda el aviso, conserva el estado y avisa a la vista. */
     public void registrarAviso(String motivo) {
         synchronized (this) {
             this.aviso = motivo;
@@ -97,7 +99,7 @@ public class ModeloPresentacion {
         notificarAviso();
     }
 
-    /** Paso 14: la vista pide los datos que va a dibujar. */
+    /** Devuelve los datos que la vista va a dibujar. */
     public synchronized DatosVista obtenerDatosVista() {
         if (estado == null) {
             return new DatosVista(miIdJugador, false, 0, null, null, null, null,

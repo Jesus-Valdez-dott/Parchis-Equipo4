@@ -8,7 +8,7 @@ import java.util.Queue;
  *
  * La tirada del dado y los bonos (20 por captura, 10 por meta) se manejan igual:
  * son AccionPendiente en una cola. La acción en la cabeza es la que se está
- * jugando; consumirAccion() la retira (diagrama 06 y 11).
+ * jugando; consumirAccion() la retira.
  *
  * Fases: ESPERANDO_LANZAMIENTO -> RESOLVIENDO -> ESPERANDO_MOVIMIENTO -> ... -> FINALIZADO
  *
@@ -21,7 +21,7 @@ public class Turno {
     public static final String ESPERANDO_MOVIMIENTO = "ESPERANDO_MOVIMIENTO";
     public static final String FINALIZADO = "FINALIZADO";
 
-    // Valores que devuelve resolverContinuacion() (diagrama 12)
+    // Valores que devuelve resolverContinuacion()
     public static final String MOVER = "MOVER";
     public static final String REPETIR = "REPETIR";
     public static final String CAMBIAR = "CAMBIAR";

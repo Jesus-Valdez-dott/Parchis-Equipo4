@@ -8,8 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Lo que la vista necesita para dibujarse (diagrama 4, pasos 14-15:
- * obtenerDatosVista -> datos actualizados). Ya viene "masticado" para la vista.
+ * Lo que la vista necesita para dibujarse, preparado para su presentación.
  *
  * @author Jesús
  */

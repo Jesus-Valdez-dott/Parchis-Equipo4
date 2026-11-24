@@ -12,14 +12,13 @@ import java.util.Map;
 import javax.swing.SwingUtilities;
 
 /**
- * «view» del MVC (capa de Presentación). Diseño del storyboard: tablero al
- * centro, cada jugador en la esquina de su color y el dado junto a quien tiene
- * el turno.
+ * «view» del MVC (capa de Presentación). Muestra el tablero, las fichas y los
+ * controles del turno de cada jugador.
  *
- * - Lo que hace el jugador se lo pasa al ControladorJuego (diagrama 3, paso 2):
+ * - Lo que hace el jugador se lo pasa al ControladorJuego:
  *   clic en el dado = lanzar; clic en una ficha resaltada = moverla.
  * - Observa al ModeloPresentacion: cuando este avisa, le pide los datos y se
- *   redibuja (diagrama 4, pasos 13-15 y 31).
+ *   redibuja.
  *
  * @author Jesús
  */
@@ -68,7 +67,7 @@ public class PantallaPartida extends PanelDiseno implements ObservadorModelo {
     }
 
     // ==========================================
-    // INTERACCIÓN DEL USUARIO (diagrama 3, pasos 1-2)
+    // Interacción del usuario
     // ==========================================
 
     public void solicitarLanzamiento() {
@@ -80,7 +79,7 @@ public class PantallaPartida extends PanelDiseno implements ObservadorModelo {
     }
 
     // ==========================================
-    // OBSERVER (diagrama 4, pasos 13-15 y 31)
+    // Observador del modelo
     // ==========================================
 
     @Override

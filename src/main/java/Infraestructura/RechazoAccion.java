@@ -1,8 +1,8 @@
 package Infraestructura;
 
 /**
- * Respuesta del Host SOLO al peer que hizo una solicitud inválida
- * (diagrama 4, pasos 26-27). El estado de la partida no cambia.
+ * Respuesta del Host solo al peer que hizo una solicitud inválida. El estado
+ * de la partida no cambia.
  *
  * @author Jesús
  */

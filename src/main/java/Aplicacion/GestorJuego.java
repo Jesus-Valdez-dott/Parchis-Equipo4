@@ -5,6 +5,7 @@ import Dominio.ResultadoAccion;
 import Infraestructura.ConfirmacionAccion;
 import Infraestructura.IGestorRed;
 import Infraestructura.INotificadorRed;
+import Infraestructura.MensajeRed;
 import Infraestructura.RechazoAccion;
 import Infraestructura.Solicitud;
 import java.io.IOException;
@@ -16,9 +17,8 @@ import java.util.UUID;
  * Capa de Aplicación. Coordina Presentación, Dominio e Infraestructura.
  *
  * Todos los peers tienen un GestorJuego; uno de ellos hace de Host:
- * - Host: tiene la FachadaPartida (estado oficial). Procesa las solicitudes
- *   (las propias y las de los peers), difunde las confirmaciones y responde
- *   los rechazos.
+ * - Host: tiene la FachadaPartida (estado oficial). Procesa solicitudes de
+ *   acciones, difunde confirmaciones y responde los rechazos.
  * - Peer cliente: manda sus solicitudes al Host y aplica las confirmaciones
  *   que recibe solo si traen una versión más nueva que la que tiene.
  *
@@ -33,7 +33,9 @@ public class GestorJuego implements INotificadorRed {
     private final IFachadaPartida fachada;   // solo en el Host (null en los demás peers)
     private IPresentacionJuego presentacion;
 
+    // Permanece en -1 hasta recibir el primer estado oficial.
     private int versionLocal = -1;
+    // Evita aplicar dos veces una acción si llega repetida por la red.
     private final Set<String> solicitudesProcesadas = new LinkedHashSet<>();
 
     /**
@@ -58,6 +60,17 @@ public class GestorJuego implements INotificadorRed {
         return idJugadorLocal;
     }
 
+    public IGestorRed getGestorRed() {
+        return gestorRed;
+    }
+
+    public void publicarEstadoOficial() {
+        if (!esHost()) {
+            throw new IllegalStateException("Solo el Host puede difundir el estado oficial");
+        }
+        difundirEstadoOficial();
+    }
+
     // ==================================================================
     // ARRANQUE
     // ==================================================================
@@ -71,37 +84,41 @@ public class GestorJuego implements INotificadorRed {
         difundirEstadoOficial();
     }
 
-    /** Este peer se une a la partida del Host. El Host le manda el estado actual. */
-    public void unirseAPartida(String ipHost, int puerto) throws IOException {
-        gestorRed.conectarAHost(ipHost, puerto);
+    /** El Host inicia la partida cuando ya hay al menos dos jugadores registrados. */
+    public synchronized boolean iniciarPartida() {
+        if (!esHost() || !fachada.iniciarPartida()) {
+            return false;
+        }
+        difundirEstadoOficial();
+        return true;
     }
 
     // ==================================================================
-    // DIAGRAMA 3 - Petición (desde la Presentación local)
+    // Solicitud local de acciones
     // ==================================================================
 
-    /** Paso 5: el ControladorJuego pide una acción del jugador local. */
+    /** Procesa una acción solicitada por el jugador local. */
     public void solicitarAccion(TipoAccion tipoAccion, String idFicha) {
-        Solicitud solicitud = crearSolicitud(tipoAccion, idFicha); // 6
+        Solicitud solicitud = crearSolicitud(tipoAccion, idFicha);
         if (esHost()) {
-            procesarSolicitud(solicitud);    // el Host no se manda mensajes a sí mismo
+            // El Host procesa su acción directamente, sin enviársela por TCP.
+            procesarSolicitud(solicitud);
         } else {
-            gestorRed.enviar(solicitud);     // 7 -> 8
+            gestorRed.transmitirEvento(solicitud);
         }
     }
 
-    /** Paso 6: crear Solicitud con identidad y versión. */
+    /** Crea una solicitud con la identidad y versión locales. */
     private synchronized Solicitud crearSolicitud(TipoAccion tipoAccion, String idFicha) {
         return new Solicitud(UUID.randomUUID().toString(), idJugadorLocal,
                 tipoAccion.name(), idFicha, versionLocal);
     }
 
     // ==================================================================
-    // DIAGRAMA 4 - Validación y difusión (en el Host)
+    // Validación y difusión de acciones en el Host
     // ==================================================================
 
-    /** Paso 1: llega la solicitud de otro peer. */
-    @Override
+    /** Procesa una solicitud recibida de otro peer. */
     public void solicitudRecibida(Solicitud solicitud) {
         if (esHost()) {
             procesarSolicitud(solicitud);
@@ -109,20 +126,18 @@ public class GestorJuego implements INotificadorRed {
     }
 
     private synchronized void procesarSolicitud(Solicitud solicitud) {
-        // 2: deduplicar idSolicitud (sin reejecutar)
         if (!solicitudesProcesadas.add(solicitud.getIdSolicitud())) {
             return;
         }
         recortarHistorial();
 
-        // 3: procesarAccion
         ResultadoAccion resultado = fachada.procesarAccion(solicitud.getIdJugador(),
                 solicitud.getTipoAccion(), solicitud.getIdFicha(), solicitud.getVersion());
 
         if (resultado.isAceptado()) {
-            difundirEstadoOficial();                                   // 7 -> 8, 9, 17
+            difundirEstadoOficial();
         } else {
-            responderRechazo(solicitud, resultado.getMotivo());        // 25 -> 26, 27
+            responderRechazo(solicitud, resultado.getMotivo());
         }
     }
 
@@ -130,7 +145,7 @@ public class GestorJuego implements INotificadorRed {
     private void difundirEstadoOficial() {
         int version = fachada.obtenerVersion();
         EstadoPartidaDTO instantanea = construirInstantanea();
-        gestorRed.difundir(new ConfirmacionAccion(idJugadorLocal, instantanea, version));
+        gestorRed.transmitirEvento(new ConfirmacionAccion(idJugadorLocal, instantanea, version));
         aplicarSiEsMasNueva(instantanea, version);
     }
 
@@ -140,8 +155,7 @@ public class GestorJuego implements INotificadorRed {
                 presentacion.notificarRechazo(motivo);   // el jugador del Host
             }
         } else {
-            gestorRed.responderAlSolicitante(solicitud.getIdSolicitud(),
-                    new RechazoAccion(idJugadorLocal, solicitud.getIdSolicitud(), motivo));
+            gestorRed.transmitirEvento(new RechazoAccion(idJugadorLocal, solicitud.getIdSolicitud(), motivo));
         }
     }
 
@@ -159,6 +173,7 @@ public class GestorJuego implements INotificadorRed {
     }
 
     private void recortarHistorial() {
+        // El historial debe ser acotado para no crecer durante partidas largas.
         while (solicitudesProcesadas.size() > MAX_SOLICITUDES_RECORDADAS) {
             String masVieja = solicitudesProcesadas.iterator().next();
             solicitudesProcesadas.remove(masVieja);
@@ -166,11 +181,10 @@ public class GestorJuego implements INotificadorRed {
     }
 
     // ==================================================================
-    // DIAGRAMA 4 - Recepción en cada peer
+    // Recepción de actualizaciones en cada peer
     // ==================================================================
 
-    /** Pasos 10 / 18. */
-    @Override
+    /** Aplica la confirmación recibida si corresponde. */
     public void confirmacionRecibida(ConfirmacionAccion confirmacion) {
         if (esHost()) {
             return; // el Host ya aplicó su propio estado oficial
@@ -180,10 +194,10 @@ public class GestorJuego implements INotificadorRed {
         }
     }
 
-    /** alt [versión recibida > versión local] -> 11 actualizarEstado; si no -> 16 ignorar. */
+    /** Actualiza el estado local solo si la versión recibida es más reciente. */
     private synchronized void aplicarSiEsMasNueva(EstadoPartidaDTO instantanea, int version) {
         if (version <= versionLocal) {
-            return; // estado duplicado o antiguo
+            return; // Ignora estados duplicados o antiguos para evitar retroceder.
         }
         versionLocal = version;
         if (presentacion != null) {
@@ -191,15 +205,40 @@ public class GestorJuego implements INotificadorRed {
         }
     }
 
-    /** Paso 28 -> 29. */
-    @Override
+    /** Procesa un rechazo recibido. */
     public void rechazoRecibido(RechazoAccion rechazo) {
         if (presentacion != null) {
             presentacion.notificarRechazo(rechazo.getMotivo());
         }
     }
 
+    @Override
+    public void mensajeRecibido(MensajeRed mensaje) {
+        if (mensaje instanceof Solicitud solicitud) {
+            solicitudRecibida(solicitud);
+        } else if (mensaje instanceof ConfirmacionAccion confirmacion) {
+            confirmacionRecibida(confirmacion);
+        } else if (mensaje instanceof RechazoAccion rechazo) {
+            rechazoRecibido(rechazo);
+        }
+    }
+
+    @Override
+    public void conexionActualizada() {
+    }
+
+    @Override
+    public void conexionPerdida(String motivo) {
+        if (presentacion != null) {
+            presentacion.notificarRechazo("Se perdió la conexión con el Host: " + motivo);
+        }
+    }
+
     public synchronized int getVersionLocal() {
         return versionLocal;
+    }
+
+    public void cerrar() {
+        gestorRed.cerrarComunicacion();
     }
 }

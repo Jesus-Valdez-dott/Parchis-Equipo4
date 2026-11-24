@@ -5,16 +5,15 @@ Arquitectura: **Capas** + **Igual a Igual (P2P) con Host autoritativo**. Interfa
 ## Cómo ejecutarlo
 
 Todos los peers ejecutan el mismo programa (`Parchis.jar`, se genera con `mvn package` en `target/`).
-Por ahora solo funciona el modo demo (ver *Estado de la red*).
 
 | Modo | Argumentos | Qué hace |
 |---|---|---|
-| Demo (por defecto) | *(ninguno)* o `demo [jugadores] [puerto]` | Abre el Host y los clientes en el mismo equipo (requerimiento 2). Ej.: `demo 2` abre solo 2 ventanas. |
-| Host | `host [jugadores] [puerto]` | Este equipo tiene el estado oficial y juega como J1. |
-| Cliente | `cliente <idJugador> [ipHost] [puerto]` | Se une al Host. Ej.: `cliente J2 192.168.1.10 5000` |
+| Menú | *(ninguno)* o `menu` | Muestra Inicio; permite crear una sala o unirse con la IP y el puerto del Host. |
+| Demo local | `demo [jugadores] [puerto]` | Abre el Host y los clientes en este equipo. Ej.: `demo 2` abre 2 ventanas; inicia la partida desde el lobby del Host. |
+| Host | `host [capacidad] [puerto]` | Abre una sala (2 a 4 jugadores), juega como J1 y espera conexiones TCP. |
+| Cliente | `cliente <idJugador> [ipHost] [puerto]` | Se registra en la sala del Host. Ej.: `cliente J2 192.168.1.10 5000` |
 
-En NetBeans los argumentos se ponen en *Project Properties → Run → Arguments*.
-Puerto por defecto: 5000.
+En NetBeans los argumentos se ponen en *Project Properties → Run → Arguments*. Si no se especifica puerto, se usa 5000.
 
 ## Capas (diagrama "1. Componentes - arquitectura en capas")
 
@@ -23,7 +22,7 @@ Puerto por defecto: 5000.
 | `Presentacion` | `PantallaPartida` «view», `PanelTablero`, `ControladorJuego` «controller», `ModeloPresentacion` «model», `ObservadorModelo`, `DatosVista`, las demás pantallas (ver abajo) | Aplicacion |
 | `Aplicacion` | `GestorJuego`, `IPresentacionJuego`, `EstadoPartidaDTO`, `TipoAccion` | Dominio, Infraestructura |
 | `Dominio` | `IFachadaPartida`, `FachadaPartida` «facade», `ResultadoAccion`, `Juego`, `Turno`, `Tablero`, `Casilla`, `Ficha`, `Jugador`, `Dado`, `ReglasMovimiento`, `AccionPendiente`, ... | — |
-| `Infraestructura` | `IGestorRed`, `INotificadorRed`, `MensajeRed` + `Solicitud`, `ConfirmacionAccion`, `RechazoAccion` (**`GestorRed` pendiente**) | — |
+| `Infraestructura` | `IGestorRed`, `GestorRed`, `ServidorTCP`, `ClienteTCP`, `ConexionPeer`, `ManejadorConexion`, `INotificadorRed`, `MensajeRed` y mensajes | — |
 
 `IPresentacionJuego` vive en Aplicación y la implementa `ControladorJuego`. Así el GestorJuego le entrega
 estados y rechazos al controlador sin que Aplicación dependa de Presentación.
@@ -51,29 +50,26 @@ Todas las pantallas del storyboard ya existen **sin lógica**: cada CU conecta s
 - **Fuentes:** Lilita One (títulos) y Roboto (texto), libres (licencia OFL), en `src/main/resources/fuentes/`.
 
 ## Estado de la red
-`Infraestructura.GestorRed` (sockets TCP) está pendiente. Mientras tanto, `com.mycompany.parchis.RedLocalSimulada`
-implementa `IGestorRed` en memoria para poder probar en modo demo. Cuando `GestorRed` esté listo:
-1. Que implemente `IGestorRed` (y entregue lo recibido con `INotificadorRed`).
-2. En `Parchis.crearRed()` cambiar `new RedLocalSimulada()` por `new Infraestructura.GestorRed()`.
-3. Borrar `RedLocalSimulada.java`.
+`Infraestructura.GestorRed` implementa la conexión TCP en estrella con las clases `ServidorTCP`, `ClienteTCP`, `ConexionPeer` y `ManejadorConexion`. El cliente se conecta con IP/puerto y envía `MensajeSolicitudUnion(idPartida, idJugador)`. El Host valida disponibilidad/capacidad con `IFachadaPartida`, registra el jugador y responde con `MensajeRespuestaUnion(aceptada, motivo)`.
 
-Las interfaces y los mensajes salen de los diagramas y se pueden ajustar si hace falta.
+El menú solicita la IP y el puerto del Host; no hay descubrimiento automático de salas. El modo `demo` también usa TCP real sobre `localhost`, igual que dos equipos separados.
 
 ## P2P (diagrama "2. Componentes - P2P")
 - Estrella: el Host abre un `ServerSocket`; hasta 3 peers se conectan a él por TCP.
-- `GestorJuego` implementa `INotificadorRed`; `GestorRed` implementa `IGestorRed`.
+- `ControlUnirsePartida` procesa los mensajes de unión y delega los mensajes del juego a `GestorJuego`; `GestorRed` implementa `IGestorRed`.
 - Solo el Host tiene `FachadaPartida` (estado oficial). Los demás guardan la última instantánea en su `ModeloPresentacion`.
-- Un peer que se conecta tarde recibe el último estado difundido.
+- El Host admite hasta 4 jugadores en total; el cliente ingresa la IP y el puerto, y recibe el estado inicial o el motivo del rechazo.
+- Al aceptar el registro, el Host envía el estado actual de la sala al nuevo peer.
 
 ## Flujo del CU Ejecutar turno
 **Diagrama 3 (Petición):** clic → `PantallaPartida` → `ControladorJuego.solicitarAccion` → `ModeloPresentacion.validarAccion`
-(si falla: `registrarAviso`) → `GestorJuego.solicitarAccion` → crea `Solicitud(idSolicitud, versión)` → `GestorRed.enviar` → Host.
+(si falla: `registrarAviso`) → `GestorJuego.solicitarAccion` → crea `Solicitud(idSolicitud, versión)` → `GestorRed.transmitirEvento` → Host.
 
 **Diagrama 4 (Validación y difusión):** `GestorRed Host` → `GestorJuego.solicitudRecibida` → deduplica `idSolicitud` →
 `FachadaPartida.procesarAccion` (turno, versión, reglas; versión + 1) →
-- aceptada: `GestorRed.difundir(ConfirmacionAccion(estado, versión))` → cada peer: si la versión es más nueva →
+- aceptada: `GestorRed.transmitirEvento(ConfirmacionAccion(estado, versión))` → cada peer: si la versión es más nueva →
   `ControladorJuego.actualizarEstado` → `ModeloPresentacion.reemplazarEstado` → `notificarCambio` → la vista llama `obtenerDatosVista`.
-- rechazada: `GestorRed.responderAlSolicitante(RechazoAccion)` → `GestorJuego.rechazoRecibido` → `ControladorJuego.notificarRechazo`
+- rechazada: `GestorRed.transmitirEvento(RechazoAccion)` → `GestorJuego.rechazoRecibido` → `ControladorJuego.notificarRechazo`
   → `ModeloPresentacion.registrarAviso` → `notificarAviso`.
 
 Cuando juega el propio Host, su GestorJuego procesa la solicitud localmente (sin red) y difunde igual.

@@ -16,7 +16,7 @@ public class ReglasMovimiento {
     }
 
     // ------------------------------------------------------------------
-    // Diagrama 10 - Barreras y opciones legales
+    // Barreras y opciones legales
     // ------------------------------------------------------------------
 
     public List<String> obtenerFichasMovibles(Juego juego) {
@@ -46,7 +46,7 @@ public class ReglasMovimiento {
         return legales;
     }
 
-    /** Regla 7: con la tirada del dado, si hay barrera propia movible, hay que romperla. */
+    /** Si una barrera propia puede moverse con el dado, solo sus fichas son legales. */
     public List<String> filtrarPrioridadBarrera(Juego juego, List<String> legales) {
         AccionPendiente accion = juego.getTurno().obtenerAccionActual();
         if (accion == null || !AccionPendiente.DADO.equals(accion.getTipo())) {
@@ -63,7 +63,7 @@ public class ReglasMovimiento {
     }
 
     // ------------------------------------------------------------------
-    // Diagramas 05 y 06 - Validar / aplicar movimiento
+    // Validar y aplicar movimiento
     // ------------------------------------------------------------------
 
     public boolean esMovimientoValido(Juego juego, String idFicha) {
@@ -82,7 +82,7 @@ public class ReglasMovimiento {
         }
     }
 
-    /** Regla 3: la ficha está en base y la tirada (no un bono) es el número de salida. */
+    /** La ficha sale de base cuando el dado coincide con su número de salida. */
     public boolean esSalida(Juego juego, String idFicha) {
         Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
         AccionPendiente accion = juego.getTurno().obtenerAccionActual();
@@ -93,8 +93,8 @@ public class ReglasMovimiento {
     }
 
     /**
-     * Devuelve la NUEVA distancia recorrida de la ficha (0 si sale de base).
-     * Regla 8: si se pasa de la meta, rebota.
+     * Devuelve la nueva distancia recorrida (0 si sale de base).
+     * Si supera la meta, la distancia se calcula con rebote.
      */
     public int calcularDestino(Juego juego, String idFicha) {
         Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
@@ -111,10 +111,10 @@ public class ReglasMovimiento {
     }
 
     // ------------------------------------------------------------------
-    // Diagrama 08 - Capturar ficha
+    // Capturar ficha
     // ------------------------------------------------------------------
 
-    /** Regla 5 y 6: captura si en el destino hay UNA ficha rival y no es casilla segura. */
+    /** Devuelve la ficha rival única en el destino, salvo que la casilla sea segura. */
     public String obtenerFichaCapturable(Juego juego, String idFicha, int destino) {
         Ficha ficha = obtenerFichaDelJugador(juego, idFicha);
         if (ficha == null) {
